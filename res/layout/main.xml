@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="horizontal">
+
+    <cn.jclive.CameraRecorder.JCCameraView
+            android:id="@+id/surfaceview"
+            android:layout_weight="1"
+            android:layout_width="0dip"
+            android:layout_height="fill_parent" android:focusable="true"/>
+    <Button
+            android:id="@+id/btnStartStop"
+            android:layout_width="55dip"
+            android:layout_height="wrap_content"
+            android:text="Start"
+            tools:context=".MainActivity" android:layout_gravity="center_vertical"/>
+
+</LinearLayout>
