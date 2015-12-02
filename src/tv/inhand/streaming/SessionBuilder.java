@@ -21,19 +21,17 @@
 package tv.inhand.streaming;
 
 import java.io.IOException;
-import java.net.InetAddress;
 
-import android.util.Log;
+import android.content.Context;
+import android.hardware.Camera.CameraInfo;
+import android.preference.PreferenceManager;
+import android.view.SurfaceHolder;
 import tv.inhand.streaming.audio.AACStream;
 import tv.inhand.streaming.audio.AudioQuality;
 import tv.inhand.streaming.audio.AudioStream;
 import tv.inhand.streaming.video.H264Stream;
 import tv.inhand.streaming.video.VideoQuality;
 import tv.inhand.streaming.video.VideoStream;
-import android.content.Context;
-import android.hardware.Camera.CameraInfo;
-import android.preference.PreferenceManager;
-import android.view.SurfaceHolder;
 
 /**
  * Call {@link #getInstance()} to get access to the SessionBuilder.
@@ -42,36 +40,18 @@ public class SessionBuilder {
 
 	public final static String TAG = "SessionBuilder";
 
-	/** Can be used with {@link #setVideoEncoder}. */
-	public final static int VIDEO_NONE = 0;
-
-	/** Can be used with {@link #setVideoEncoder}. */
-	public final static int VIDEO_H264 = 1;
-
-	/** Can be used with {@link #setVideoEncoder}. */
-	public final static int VIDEO_H263 = 2;
-
-	/** Can be used with {@link #setAudioEncoder}. */
-	public final static int AUDIO_NONE = 0;
-
-	/** Can be used with {@link #setAudioEncoder}. */
-	public final static int AUDIO_AMRNB = 3;
-
-	/** Can be used with {@link #setAudioEncoder}. */
-	public final static int AUDIO_AAC = 5;
+	private String mHost;
+	private int mPort = 1935;
+	private String mAppName;
+	private String mStringName;
 
 	// Default configuration
 	private VideoQuality mVideoQuality = new VideoQuality();
 	private AudioQuality mAudioQuality = new AudioQuality();
 	private Context mContext;
-	private int mVideoEncoder = VIDEO_H264;
-	private int mAudioEncoder = AUDIO_AAC;
 	private int mCamera = CameraInfo.CAMERA_FACING_BACK;
-	private int mTimeToLive = 64;
 	private boolean mFlash = false;
 	private SurfaceHolder mSurfaceHolder = null;
-	private InetAddress mOrigin = null;
-	private InetAddress mDestination = null;
 
 	// Removes the default public constructor
 	private SessionBuilder() {}
@@ -104,28 +84,19 @@ public class SessionBuilder {
 
 		session = new Session();
 		session.setContext(mContext);
-		session.setOrigin(mOrigin);
-		session.setDestination(mDestination);
-		session.setTimeToLive(mTimeToLive);
 
-		switch (mAudioEncoder) {
-			case AUDIO_AAC:
-				AACStream stream = new AACStream();
-				session.addAudioTrack(stream);
-				break;
-			default:
-				Log.e(TAG, "Unsupported audio encoder:" + mAudioEncoder);
+		{
+			AACStream stream = new AACStream();
+			session.addAudioTrack(stream);
+			if (mContext != null)
+				stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
 		}
 
-		switch (mVideoEncoder) {
-			case VIDEO_H264:
-				H264Stream stream = new H264Stream(mCamera);
-				if (mContext!=null)
-					stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
-				session.addVideoTrack(stream);
-				break;
-			default:
-				Log.e(TAG, "Unsupported video encoder:" + mVideoEncoder);
+		{
+			H264Stream stream = new H264Stream(mCamera);
+			if (mContext!=null)
+				stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
+			session.addVideoTrack(stream);
 		}
 
 		if (session.getVideoTrack()!=null) {
@@ -140,8 +111,30 @@ public class SessionBuilder {
 			audio.setAudioQuality(AudioQuality.merge(mAudioQuality,audio.getAudioQuality()));
 		}
 
+		{
+			Publisher publisher = new Publisher();
+			publisher.setHost(mHost);
+			publisher.setPort(mPort);
+			publisher.setApp(mAppName);
+			session.addPublisheer(publisher);
+		}
 		return session;
 
+	}
+
+	public SessionBuilder setHost(String host) {
+		mHost = host;
+		return this;
+	}
+
+	public SessionBuilder setPort(int port) {
+		mPort = port;
+		return this;
+	}
+
+	public SessionBuilder setAppName(String app) {
+		mAppName = app;
+		return this;
 	}
 
 	/**
@@ -153,29 +146,12 @@ public class SessionBuilder {
 		return this;
 	}
 
-	/** Sets the destination of the session. */
-	public SessionBuilder setDestination(InetAddress destination) {
-		mDestination = destination;
-		return this;
-	}
-
-	/** Sets the origin of the session. It appears in the SDP of the session. */
-	public SessionBuilder setOrigin(InetAddress origin) {
-		mOrigin = origin;
-		return this;
-	}
-
 	/** Sets the video stream quality. */
 	public SessionBuilder setVideoQuality(VideoQuality quality) {
 		mVideoQuality = VideoQuality.merge(quality, mVideoQuality);
 		return this;
 	}
 
-	/** Sets the audio encoder. */
-	public SessionBuilder setAudioEncoder(int encoder) {
-		mAudioEncoder = encoder;
-		return this;
-	}
 
 	/** Sets the audio quality. */
 	public SessionBuilder setAudioQuality(AudioQuality quality) {
@@ -183,11 +159,6 @@ public class SessionBuilder {
 		return this;
 	}
 
-	/** Sets the default video encoder. */
-	public SessionBuilder setVideoEncoder(int encoder) {
-		mVideoEncoder = encoder;
-		return this;
-	}
 
 	public SessionBuilder setFlashEnabled(boolean enabled) {
 		mFlash = enabled;
@@ -196,11 +167,6 @@ public class SessionBuilder {
 
 	public SessionBuilder setCamera(int camera) {
 		mCamera = camera;
-		return this;
-	}
-
-	public SessionBuilder setTimeToLive(int ttl) {
-		mTimeToLive = ttl;
 		return this;
 	}
 
@@ -218,29 +184,9 @@ public class SessionBuilder {
 		return mContext;
 	}
 
-	/** Returns the destination ip address set with {@link #setDestination(InetAddress)}. */
-	public InetAddress getDestination() {
-		return mDestination;
-	}
-
-	/** Returns the origin ip address set with {@link #setOrigin(InetAddress)}. */
-	public InetAddress getOrigin() {
-		return mOrigin;
-	}
-
-	/** Returns the audio encoder set with {@link #setAudioEncoder(int)}. */
-	public int getAudioEncoder() {
-		return mAudioEncoder;
-	}
-
 	/** Returns the id of the {@link android.hardware.Camera} set with {@link #setCamera(int)}. */
 	public int getCamera() {
 		return mCamera;
-	}
-
-	/** Returns the video encoder set with {@link #setVideoEncoder(int)}. */
-	public int getVideoEncoder() {
-		return mVideoEncoder;
 	}
 
 	/** Returns the VideoQuality set with {@link #setVideoQuality(VideoQuality)}. */
@@ -263,25 +209,17 @@ public class SessionBuilder {
 		return mSurfaceHolder;
 	}
 
-	/** Returns the time to live set with {@link #setTimeToLive(int)}. */
-	public int getTimeToLive() {
-		return mTimeToLive;
-	}
-
 	/** Returns a new {@link SessionBuilder} with the same configuration. */
 	public SessionBuilder clone() {
 		return new SessionBuilder()
-				.setDestination(mDestination)
-				.setOrigin(mOrigin)
 				.setSurfaceHolder(mSurfaceHolder)
+				.setHost(mHost)
+				.setPort(mPort)
+				.setAppName(mAppName)
 				.setVideoQuality(mVideoQuality)
-				.setVideoEncoder(mVideoEncoder)
 				.setFlashEnabled(mFlash)
 				.setCamera(mCamera)
-				.setTimeToLive(mTimeToLive)
-				.setAudioEncoder(mAudioEncoder)
 				.setAudioQuality(mAudioQuality)
 				.setContext(mContext);
 	}
-
 }

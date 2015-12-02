@@ -21,11 +21,13 @@ import java.util.Date;
 /**
  * Created by jinchudarwin on 15/11/27.
  */
-public class CameraTest extends Activity {
+public class CameraTest extends Activity implements SurfaceHolder.Callback {
     private static final String TAG = "JCameara";
 
+    private SurfaceHolder mHolder;
+
     private Camera mCamera;
-    private CameraPreview mPreview;
+    private SurfaceView mPreview;
     private MediaRecorder mMediaRecorder;
     private boolean isRecording = false;
 
@@ -34,23 +36,23 @@ public class CameraTest extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.cameratest);
+        setContentView(R.layout.main2);
 
         // Create an instance of Camera
         mCamera = CameraUtils.getCameraInstance();
 
         // Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
 
+        mPreview = (SurfaceView)findViewById(R.id.surfaceview);
+        mHolder = mPreview.getHolder();
+        mHolder.addCallback(this);
         // Add a listener to the Capture button
-        Button captureButton = (Button) findViewById(R.id.button_capture);
+        Button captureButton = (Button) findViewById(R.id.start);
         captureButton.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        Log.d(TAG, "onClick");
+                        Log.i(TAG, "onClick");
                         if (isRecording) {
                             // local socket must be release before stopping MediaRecorder.
                             releaseLocalSocket();
@@ -74,7 +76,7 @@ public class CameraTest extends Activity {
                                         e.printStackTrace();
                                         return ;
                                     }
-                                    runConsumerThread();
+//                                    runConsumerThread();
                                     // inform the user that recording has started
                                     setCaptureButtonText("Stop");
                                     isRecording = true;
@@ -103,7 +105,7 @@ public class CameraTest extends Activity {
     }
 
     private void setCaptureButtonText(String text) {
-        Button captureButton = (Button) findViewById(R.id.button_capture);
+        Button captureButton = (Button) findViewById(R.id.start);
         captureButton.setText(text);
     }
 
@@ -168,17 +170,17 @@ public class CameraTest extends Activity {
         // Step 6: Prepare configured MediaRecorder
         try {
             mMediaRecorder.prepare();
-            Log.d(TAG, "Prepare OK");
+            Log.i(TAG, "Prepare OK");
         } catch (IllegalStateException e) {
-            Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e + "," + e.getMessage());
+            Log.i(TAG, "IllegalStateException preparing MediaRecorder: " + e + "," + e.getMessage());
             releaseMediaRecorder();
             return false;
         } catch (IOException e) {
-            Log.d(TAG, "IOException preparing MediaRecorder: " + e + "," + e.getMessage());
+            Log.i(TAG, "IOException preparing MediaRecorder: " + e + "," + e.getMessage());
             releaseMediaRecorder();
             return false;
         } catch (Exception e) {
-            Log.d(TAG, "Exception preparing:" + e + "," + e.getMessage());
+            Log.i(TAG, "Exception preparing:" + e + "," + e.getMessage());
             return false;
         }
         return true;
@@ -238,7 +240,7 @@ public class CameraTest extends Activity {
                 }
                 number = 0;
                 while (true) {
-                    Log.d(TAG, "Thread running");
+                    Log.i(TAG, "Thread running");
                     try {
                         num = fis.read(buffer, number, frame_size);
                         number += num;
@@ -306,6 +308,50 @@ public class CameraTest extends Activity {
         }catch (Exception e) {
             e.printStackTrace();
             Log.e(TAG, "Can't close local socket");
+        }
+    }
+
+    public void surfaceCreated(SurfaceHolder holder) {
+        // The Surface has been created, now tell the camera where to draw the preview.
+        try {
+            mCamera.setPreviewDisplay(holder);
+            mCamera.startPreview();
+        } catch (IOException e) {
+            Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+        }
+    }
+
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        // empty. Take care of releasing the Camera preview in your activity.
+    }
+
+    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+        // If your preview can change or rotate, take care of those events here.
+        // Make sure to stop the preview before resizing or reformatting it.
+
+        if (mHolder.getSurface() == null){
+            // preview surface does not exist
+            return;
+        }
+
+        // stop preview before making changes
+        try {
+            mCamera.stopPreview();
+        } catch (Exception e){
+            // ignore: tried to stop a non-existent preview
+        }
+
+        // set preview size and make any resize, rotate or
+        // reformatting changes here
+        mCamera.setDisplayOrientation(90);
+
+        // start preview with new settings
+        try {
+            mCamera.setPreviewDisplay(mHolder);
+            mCamera.startPreview();
+
+        } catch (Exception e){
+            Log.d(TAG, "Error starting camera preview: " + e.getMessage());
         }
     }
 }

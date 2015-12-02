@@ -21,7 +21,6 @@
 package tv.inhand.streaming;
 
 import java.io.IOException;
-import java.net.InetAddress;
 
 import tv.inhand.streaming.audio.AudioStream;
 import tv.inhand.streaming.video.VideoStream;
@@ -41,52 +40,45 @@ public class Session {
 	// Prevents threads from modifying two sessions simultaneously
 	private static Object sLock = new Object();
 
-	private InetAddress mOrigin;
-	private InetAddress mDestination;
-	private int mTimeToLive = 64;
-	private long mTimestamp;
 	private Context mContext = null;
 	private WifiManager.MulticastLock mLock = null;
 	
 	private AudioStream mAudioStream = null;
 	private VideoStream mVideoStream = null;
 
-	/** 
+
+
+	private Publisher mPublisher;
+	private String mStreamName;
+
+	/**
 	 * Creates a streaming session that can be customized by adding tracks.
 	 */
 	public Session() {
-		this(null, null);
-		try {
-			mOrigin = InetAddress.getLocalHost();
-		} catch (Exception ignore) {
-			mOrigin = null;
-		}
 	}
 
-	/** 
-	 * Creates a streaming session that can be customized by adding tracks.
-	 * @param destination The destination address of the streams
-	 * @param origin The origin address of the streams (appears in the session description)
-	 */
-	public Session(InetAddress origin, InetAddress destination) {
-		long uptime = System.currentTimeMillis();
-		mDestination = destination;
-		mOrigin = origin;
-		mTimestamp = (uptime/1000)<<32 & (((uptime-((uptime/1000)*1000))>>32)/1000); // NTP timestamp
+	public void setStreamName(String streamName) {
+		mStreamName = streamName;
+	}
+
+	public void addPublisheer(Publisher publisher) {
+		mPublisher = publisher;
+		mAudioStream.getPacketizer().setPublisher(mPublisher);
+		mVideoStream.getPacketizer().setPublisher(mPublisher);
 	}
 
 	public void addAudioTrack(AudioStream track) {
 		mAudioStream = track;
 	}
-	
+
 	public void addVideoTrack(VideoStream track) {
 		mVideoStream = track;
 	}
-	
+
 	public void removeAudioTrack() {
 		mAudioStream = null;
 	}
-	
+
 	public void removeVideoTrack() {
 		mVideoStream = null;
 	}
@@ -106,47 +98,6 @@ public class Session {
 	 **/
 	public void setContext(Context context) {
 		mContext = context;
-	}
-	
-	/** 
-	 * The origin address of the session.
-	 * It appears in the sessionn description.
-	 * @param origin The origin address
-	 */
-	public void setOrigin(InetAddress origin) {
-		mOrigin = origin;
-	}
-
-	/**
-	 * The destination address for all the streams of the session.
-	 * You must stop all tracks before calling this method.
-	 * @param destination The destination address
-	 */
-	public void setDestination(InetAddress destination) throws IllegalStateException {
-		mDestination =  destination;
-	}
-
-	/** 
-	 * Set the TTL of all packets sent during the session.
-	 * You must call this method before adding tracks to the session.
-	 * @param ttl The Time To Live
-	 */
-	public void setTimeToLive(int ttl) {
-		mTimeToLive = ttl;
-	}
-
-	public boolean trackExists(int id) {
-		if (id==0) 
-			return mAudioStream!=null;
-		else
-			return mVideoStream!=null;
-	}
-	
-	public Stream getTrack(int id) {
-		if (id==0)
-			return mAudioStream;
-		else
-			return mVideoStream;
 	}
 
 	/**
@@ -184,6 +135,10 @@ public class Session {
 	public void start() throws IllegalStateException, IOException {
 		start(0);
 		start(1);
+//		if (mStreamName == null) {
+//			throw new IllegalStateException("Stream name missed");
+//		}
+//		mPublisher.start(mStreamName, "live", null);
 	}
 
 	/** 
@@ -210,6 +165,7 @@ public class Session {
 	public void stop() {
 		stop(0);
 		stop(1);
+//		mPublisher.stop();
 	}
 
 	/** Deletes all existing tracks & release associated resources. */

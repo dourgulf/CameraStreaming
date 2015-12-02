@@ -27,7 +27,7 @@ package tv.inhand.streaming.video;
 public class VideoQuality {
 
 	/** Default video stream quality. */
-	public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(640,480,15,500000);
+	public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(320,240,15,500000);
 
 	/**	Represents a quality for a video stream. */ 
 	public VideoQuality() {}

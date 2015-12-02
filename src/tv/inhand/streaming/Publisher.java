@@ -1,5 +1,6 @@
-package tv.inhand.streaming.rtmp;
+package tv.inhand.streaming;
 
+import android.util.Log;
 import org.red5.io.utils.ObjectMap;
 import org.red5.server.messaging.IMessage;
 import org.red5.server.net.rtmp.INetStreamEventHandler;
@@ -20,8 +21,8 @@ import java.util.Map;
 /**
  * Created by jinchudarwin on 15/12/2.
  */
-public class RTMPPublisher implements INetStreamEventHandler, IPendingServiceCallback {
-    private static Logger log = LoggerFactory.getLogger(RTMPPublisher.class);
+public class Publisher implements INetStreamEventHandler, IPendingServiceCallback {
+    private static Logger log = LoggerFactory.getLogger(Publisher.class);
 
     private List<IMessage> frameBuffer = new ArrayList<IMessage>();
 

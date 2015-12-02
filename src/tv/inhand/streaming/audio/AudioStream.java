@@ -86,7 +86,7 @@ public abstract class AudioStream  extends MediaStream {
 			mPacketizer.setInputStream(new ParcelFileDescriptor.AutoCloseInputStream(mReceiver));
 			mPacketizer.start();
 			mStreaming = true;
-		} catch (IOException e) {
+		} catch (Exception e) {
 			stop();
 			throw new IOException("Something happened with the local sockets :/ Start failed !");
 		}

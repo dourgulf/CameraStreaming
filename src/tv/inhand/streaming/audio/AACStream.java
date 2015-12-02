@@ -82,7 +82,7 @@ public class AACStream extends AudioStream {
 		} else {
 			Log.d(TAG,"AAC supported on this phone");
 		}
-
+		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
 		mPacketizer = new AACADTSPacketizer();
 	}
 
@@ -138,7 +138,6 @@ public class AACStream extends AudioStream {
 	 */
 	@SuppressLint("InlinedApi")
 	private void testADTS() throws IllegalStateException, IOException {
-
 		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
 		try {
 			Field name = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
@@ -201,6 +200,7 @@ public class AACStream extends AudioStream {
 		} catch (InterruptedException e) {}
 
 		mMediaRecorder.stop();
+		mMediaRecorder.reset();
 		mMediaRecorder.release();
 		mMediaRecorder = null;
 

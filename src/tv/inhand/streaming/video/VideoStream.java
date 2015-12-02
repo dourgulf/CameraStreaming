@@ -243,17 +243,16 @@ public abstract class VideoStream extends MediaStream {
 	 */
 	public VideoQuality getVideoQuality() {
 		return mQuality;
-	}	
-
-	/** 
-	 * Modifies the videoEncoder of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #start()}.
-	 * @param videoEncoder Encoder of the stream
-	 */
-	protected void setVideoEncoder(int videoEncoder) {
-		this.mVideoEncoder = videoEncoder;
 	}
 
+    /**
+     * Modifies the videoEncoder of the stream. You can call this method at any time
+     * and changes will take effect next time you call {@link #start()}.
+     * @param videoEncoder Encoder of the stream
+     */
+    protected void setVideoEncoder(int videoEncoder) {
+        this.mVideoEncoder = videoEncoder;
+    }
 	/**
 	 * Starts the stream.
 	 * This will also open the camera and dispay the preview 
@@ -330,7 +329,16 @@ public abstract class VideoStream extends MediaStream {
 
 		mMediaRecorder = new MediaRecorder();
 		mMediaRecorder.setCamera(mCamera);
-		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+//		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+//        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+//        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+//        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+//        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+//        mMediaRecorder.setAudioChannels(1);
+//        mMediaRecorder.setAudioEncodingBitRate(64000);
+//        mMediaRecorder.setAudioSamplingRate(44100);
+
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
 		mMediaRecorder.setVideoEncoder(mVideoEncoder);
 		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
@@ -342,6 +350,37 @@ public abstract class VideoStream extends MediaStream {
 		// This one little trick makes streaming feasible quiet simply: data from the camera
 		// can then be manipulated at the other end of the socket
 		mMediaRecorder.setOutputFile(mSender.getFileDescriptor());
+
+		// Set event listener
+		mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
+			@Override
+			public void onInfo(MediaRecorder mr, int what, int extra) {
+				switch (what) {
+					case MediaRecorder.MEDIA_RECORDER_INFO_UNKNOWN:
+						Log.i(TAG, "MEDIA_RECORDER_INFO_UNKNOWN, " + extra);
+						break;
+					case MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED:
+						Log.i(TAG, "MEDIA_RECORDER_INFO_MAX_DURATION_REACHED, " + extra);
+						break;
+					case MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED:
+						Log.i(TAG, "MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED, " + extra);
+						break;
+				}
+			}
+		});
+		mMediaRecorder.setOnErrorListener(new MediaRecorder.OnErrorListener() {
+			@Override
+			public void onError(MediaRecorder mr, int what, int extra) {
+				switch (what) {
+					case MediaRecorder.MEDIA_RECORDER_ERROR_UNKNOWN:
+						Log.e(TAG, "MEDIA_RECORDER_ERROR_UNKNOWN, " + extra);
+						break;
+					case MediaRecorder.MEDIA_ERROR_SERVER_DIED:
+						Log.e(TAG, "MEDIA_ERROR_SERVER_DIED, " + extra);
+						break;
+				}
+			}
+		});
 
 		try {
 			mMediaRecorder.prepare();
@@ -383,7 +422,7 @@ public abstract class VideoStream extends MediaStream {
 						stop();
 					} else {
 						Log.e(TAG,"Error unknown with the camera: "+error);
-					}	
+					}
 				}
 			});
 
@@ -470,7 +509,7 @@ public abstract class VideoStream extends MediaStream {
 
 	protected void lockCamera() {
 		if (mUnlocked) {
-			Log.d(TAG,"Locking camera");
+			Log.i(TAG,"Locking camera");
 			try {
 				mCamera.reconnect();
 			} catch (Exception e) {
@@ -482,7 +521,7 @@ public abstract class VideoStream extends MediaStream {
 
 	protected void unlockCamera() {
 		if (!mUnlocked) {
-			Log.d(TAG,"Unlocking camera");
+			Log.i(TAG,"Unlocking camera");
 			try {	
 				mCamera.unlock();
 			} catch (Exception e) {

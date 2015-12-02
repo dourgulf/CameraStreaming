@@ -1,6 +1,7 @@
 package tv.inhand.streaming.rtmp;
 
 import org.red5.server.stream.message.RTMPMessage;
+import tv.inhand.streaming.Publisher;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,13 +11,13 @@ import java.io.InputStream;
  */
 abstract public class BasePacketizer {
     protected InputStream is = null;
-    protected RTMPPublisher publisher;
+    protected Publisher publisher;
     protected byte[] buffer;
 
     public BasePacketizer() throws IOException {
     }
 
-    public void setPublisher(RTMPPublisher publisher) {
+    public void setPublisher(Publisher publisher) {
         this.publisher = publisher;
     }
 

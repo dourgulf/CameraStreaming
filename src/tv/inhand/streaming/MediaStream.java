@@ -78,12 +78,12 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/** Stops the stream. */
-	@SuppressLint("NewApi")
 	public synchronized  void stop() {
 		if (mStreaming) {
 			mPacketizer.stop();
 			try {
 				mMediaRecorder.stop();
+				mMediaRecorder.reset();
 				mMediaRecorder.release();
 				mMediaRecorder = null;
 				closeSockets();

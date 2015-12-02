@@ -81,14 +81,21 @@ public class H264Stream extends VideoStream {
 		((H264Packetizer)mPacketizer).setStreamParameters(pps, sps);
 		super.start();
 	}
-	
+
+	private String savedKey() {
+		return "h264"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
+	}
 	// Should not be called by the UI thread
 	private MP4Config testH264() throws IllegalStateException, IOException {
 
 		if (mSettings != null) {
-			if (mSettings.contains("h264"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY)) {
-				String[] s = mSettings.getString("h264"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY, "").split(",");
-				return new MP4Config(s[0],s[1],s[2]);
+			String saveKey = savedKey();
+
+			if (mSettings.contains(saveKey)) {
+				String savedValue = mSettings.getString(saveKey, "");
+				Log.i(TAG, "Read MP4Config:" + savedValue);
+				String[] values = savedValue.split(",");
+				return new MP4Config(values[0],values[1],values[2]);
 			}
 		}
 
@@ -129,7 +136,6 @@ public class H264Stream extends VideoStream {
 		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 		mMediaRecorder.setMaxDuration(1000);
-		//mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE);
 		mMediaRecorder.setVideoEncoder(mVideoEncoder);
 		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
 		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
@@ -140,15 +146,15 @@ public class H264Stream extends VideoStream {
 		// We wait a little and stop recording
 		mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
 			public void onInfo(MediaRecorder mr, int what, int extra) {
-				Log.d(TAG,"MediaRecorder callback called !");
+				Log.i(TAG,"MediaRecorder callback called !");
 				if (what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-					Log.d(TAG,"MediaRecorder: MAX_DURATION_REACHED");
+					Log.i(TAG,"MediaRecorder: MAX_DURATION_REACHED");
 				} else if (what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED) {
-					Log.d(TAG,"MediaRecorder: MAX_FILESIZE_REACHED");
+					Log.i(TAG,"MediaRecorder: MAX_FILESIZE_REACHED");
 				} else if (what==MediaRecorder.MEDIA_RECORDER_INFO_UNKNOWN) {
-					Log.d(TAG,"MediaRecorder: INFO_UNKNOWN");
+					Log.i(TAG,"MediaRecorder: INFO_UNKNOWN");
 				} else {
-					Log.d(TAG,"WTF ?");
+					Log.i(TAG,"WTF ?");
 				}
 				mLock.release();
 			}
@@ -159,10 +165,10 @@ public class H264Stream extends VideoStream {
 
 		try {
 			if (mLock.tryAcquire(6,TimeUnit.SECONDS)) {
-				Log.d(TAG,"MediaRecorder callback was called :)");
+				Log.i(TAG,"MediaRecorder callback was called :)");
 				Thread.sleep(400);
 			} else {
-				Log.d(TAG,"MediaRecorder callback was not called after 6 seconds... :(");
+				Log.i(TAG,"MediaRecorder callback was not called after 6 seconds... :(");
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -170,6 +176,7 @@ public class H264Stream extends VideoStream {
 			try {
 				mMediaRecorder.stop();
 			} catch (Exception e) {}
+			mMediaRecorder.reset();
 			mMediaRecorder.release();
 			mMediaRecorder = null;
 			lockCamera();
@@ -180,22 +187,24 @@ public class H264Stream extends VideoStream {
 
 		// Delete dummy video
 		File file = new File(TESTFILE);
-		if (!file.delete()) Log.e(TAG,"Temp file could not be erased");
+		if (!file.delete())
+			Log.e(TAG,"Temp file could not be erased");
 
 		// Restore flash state
 		mFlashState = savedFlashState;
 
-		Log.i(TAG,"H264 Test succeded...");
+		Log.i(TAG,"H264 Test succeeded...");
 
 		// Save test result
 		if (mSettings != null) {
 			Editor editor = mSettings.edit();
-			editor.putString("h264"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY, config.getProfileLevel()+","+config.getB64SPS()+","+config.getB64PPS());
+			String saveKey = savedKey();
+			String saveValue = config.getProfileLevel()+","+config.getB64SPS()+","+config.getB64PPS();
+			editor.putString(saveKey, saveValue);
 			editor.commit();
+			Log.i(TAG, "Save configure:" + saveKey + ", " + saveValue);
 		}
 		
 		return config;
-
 	}
-
 }
