@@ -135,44 +135,6 @@ public class Session {
 		mTimeToLive = ttl;
 	}
 
-	/** 
-	 * Returns a Session Description that can be stored in a file or sent to a client with RTSP.
-	 * @return The Session Description
-	 * @throws IllegalStateException
-	 * @throws IOException
-	 */
-	public String getSessionDescription() throws IllegalStateException, IOException {
-		if (mDestination==null) {
-			throw new IllegalStateException("setDestination() has not been called !");
-		}
-		synchronized (sLock) {
-			StringBuilder sessionDescription = new StringBuilder();
-			sessionDescription.append("v=0\r\n");
-			// TODO: Add IPV6 support
-			sessionDescription.append("o=- "+mTimestamp+" "+mTimestamp+" IN IP4 "+(mOrigin==null?"127.0.0.1":mOrigin.getHostAddress())+"\r\n");
-			sessionDescription.append("s=Unnamed\r\n");
-			sessionDescription.append("i=N/A\r\n");
-			sessionDescription.append("c=IN IP4 "+mDestination.getHostAddress()+"\r\n");
-			// t=0 0 means the session is permanent (we don't know when it will stop)
-			sessionDescription.append("t=0 0\r\n");
-			sessionDescription.append("a=recvonly\r\n");
-			// Prevents two different sessions from using the same peripheral at the same time
-			if (mAudioStream != null) {
-				sessionDescription.append(mAudioStream.generateSessionDescription());
-				sessionDescription.append("a=control:trackID="+0+"\r\n");
-			}
-			if (mVideoStream != null) {
-				sessionDescription.append(mVideoStream.generateSessionDescription());
-				sessionDescription.append("a=control:trackID="+1+"\r\n");
-			}			
-			return sessionDescription.toString();
-		}
-	}
-
-	public InetAddress getDestination() {
-		return mDestination;
-	}
-
 	public boolean trackExists(int id) {
 		if (id==0) 
 			return mAudioStream!=null;
@@ -213,8 +175,6 @@ public class Session {
 		synchronized (sLock) {
 			Stream stream = id==0 ? mAudioStream : mVideoStream;
 			if (stream!=null && !stream.isStreaming()) {
-				stream.setTimeToLive(mTimeToLive);
-				stream.setDestinationAddress(mDestination);
 				stream.start();
 			}
 		}
@@ -222,18 +182,6 @@ public class Session {
 
 	/** Starts all streams. */
 	public void start() throws IllegalStateException, IOException {
-		synchronized (sLock) {
-			if (mDestination.isMulticastAddress()) {
-				if (mContext != null) {
-					// Aquire a MulticastLock to allow multicasted UDP packet
-					WifiManager wifi = (WifiManager)mContext.getSystemService( Context.WIFI_SERVICE );
-					if(wifi != null){
-						mLock = wifi.createMulticastLock("net.majorkernelpanic.streaming");
-						mLock.acquire();
-					}
-				}
-			}
-		}
 		start(0);
 		start(1);
 	}

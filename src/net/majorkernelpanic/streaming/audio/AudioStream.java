@@ -2,6 +2,7 @@ package net.majorkernelpanic.streaming.audio;
 
 import java.io.IOException;
 
+import android.os.ParcelFileDescriptor;
 import net.majorkernelpanic.streaming.MediaStream;
 import android.media.MediaRecorder;
 import android.util.Log;
@@ -82,8 +83,7 @@ public abstract class AudioStream  extends MediaStream {
 		try {
 			// mReceiver.getInputStream contains the data from the camera
 			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(mReceiver.getInputStream());
+			mPacketizer.setInputStream(new ParcelFileDescriptor.AutoCloseInputStream(mReceiver));
 			mPacketizer.start();
 			mStreaming = true;
 		} catch (IOException e) {

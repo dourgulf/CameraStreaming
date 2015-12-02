@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="red5 libs">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/libs/commons-lang-2.6.jar!/" />
+      <root url="jar://$PROJECT_DIR$/libs/mina-core-2.0.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/libs/org.springframework.core-3.0.5.RELEASE.jar!/" />
+      <root url="jar://$PROJECT_DIR$/libs/slf4j-api-1.6.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

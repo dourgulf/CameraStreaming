@@ -21,22 +21,19 @@
 package net.majorkernelpanic.streaming.video;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 
+import android.os.ParcelFileDescriptor;
 import net.majorkernelpanic.streaming.MediaStream;
-import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
 import android.annotation.SuppressLint;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.Size;
-import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
-import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -75,8 +72,6 @@ public abstract class VideoStream extends MediaStream {
 	public VideoStream(int camera) {
 		super();
 		setCamera(camera);
-		// TODO: Remove this when encoding with the MediaCodec API is ready
-		setMode(MODE_MEDIARECORDER_API);
 	}
 
 	/**
@@ -162,7 +157,7 @@ public abstract class VideoStream extends MediaStream {
 		if (mCamera != null) {
 
 			// Needed on Android 2.3
-			if (mStreaming && mMode == MODE_MEDIARECORDER_API) {
+			if (mStreaming) {
 				lockCamera();
 			}
 
@@ -182,7 +177,7 @@ public abstract class VideoStream extends MediaStream {
 			}
 
 			// Needed on Android 2.3
-			if (mStreaming && mMode == MODE_MEDIARECORDER_API) {
+			if (mStreaming) {
 				unlockCamera();
 			}
 
@@ -276,9 +271,6 @@ public abstract class VideoStream extends MediaStream {
 	/** Stops the stream. */
 	public synchronized void stop() {
 		if (mCamera != null) {
-			if (mMode == MODE_MEDIACODEC_API) {
-				mCamera.setPreviewCallback(null);
-			}
 			super.stop();
 			// We need to restart the preview
 			if (!mCameraOpenedManually) {
@@ -343,7 +335,7 @@ public abstract class VideoStream extends MediaStream {
 		mMediaRecorder = new MediaRecorder();
 		mMediaRecorder.setCamera(mCamera);
 		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
 		mMediaRecorder.setVideoEncoder(mVideoEncoder);
 		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
 		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
@@ -361,8 +353,7 @@ public abstract class VideoStream extends MediaStream {
 
 			// mReceiver.getInputStream contains the data from the camera
 			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(mReceiver.getInputStream());
+			mPacketizer.setInputStream(new ParcelFileDescriptor.AutoCloseInputStream(mReceiver));
 			mPacketizer.start();
 			mStreaming = true;
 		} catch (IOException e) {
@@ -375,70 +366,6 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 	}
-
-	/**
-	 * Encoding of the audio/video is done by a MediaCodec.
-	 */
-	@SuppressLint({ "InlinedApi", "NewApi" })
-	protected void encodeWithMediaCodec() throws RuntimeException, IOException {
-
-		// Opens the camera if needed
-		createCamera();
-
-		// Starts the preview if needed
-		if (!mPreviewStarted) {
-			try {
-				mCamera.startPreview();
-				mPreviewStarted = true;
-			} catch (RuntimeException e) {
-				destroyCamera();
-				throw e;
-			}
-		}
-
-		mMediaCodec = MediaCodec.createEncoderByType("video/avc");
-		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
-		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
-		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);	
-		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
-		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 4);
-		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-		mMediaCodec.start();
-
-		final ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
-
-		mCamera.setPreviewCallback(new Camera.PreviewCallback() {
-			@Override
-			public void onPreviewFrame(byte[] data, Camera camera) {
-				long now = System.nanoTime()/1000, timeout = 1000000/mQuality.framerate;
-				int bufferIndex = mMediaCodec.dequeueInputBuffer(timeout);
-
-				if (bufferIndex>=0) {
-					inputBuffers[bufferIndex].clear();
-					inputBuffers[bufferIndex].put(data, 0, data.length);
-					mMediaCodec.queueInputBuffer(bufferIndex, 0, data.length, System.nanoTime()/1000, 0);
-				} else {
-					Log.e(TAG,"No buffer available !");
-				}
-
-			}
-		});
-
-		try {
-			// mReceiver.getInputStream contains the data from the camera
-			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
-		}
-
-	}
-
-	public abstract String generateSessionDescription() throws IllegalStateException, IOException;
 
 	protected synchronized void createCamera() throws RuntimeException, IOException {
 		if (mSurfaceHolder == null || mSurfaceHolder.getSurface() == null || !mSurfaceReady)
@@ -465,13 +392,6 @@ public abstract class VideoStream extends MediaStream {
 			});
 
 			Parameters parameters = mCamera.getParameters();
-
-			if (mMode == MODE_MEDIACODEC_API) {
-				getClosestSupportedQuality(parameters);
-				parameters.setPreviewFormat(ImageFormat.YV12);
-				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-				parameters.setPreviewFrameRate(mQuality.framerate);
-			}
 
 			if (mFlashState) {
 				if (parameters.getFlashMode()==null) {
@@ -510,25 +430,6 @@ public abstract class VideoStream extends MediaStream {
 			mUnlocked = false;
 			mPreviewStarted = false;
 		}	
-	}	
-	
-	/** Verifies if streaming using the MediaCodec API is feasable. */
-	@SuppressLint("NewApi")
-	private void checkMediaCodecAPI() {
-		for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
-			MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
-			if (codecInfo.isEncoder()) {
-				MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType("video/avc");
-				for (int i = 0; i < capabilities.colorFormats.length; i++) {
-					int format = capabilities.colorFormats[i];
-					Log.e(TAG, codecInfo.getName()+" with color format " + format);           
-				}
-				/*for (int i = 0; i < capabilities.profileLevels; i++) {
-					int format = capabilities.colorFormats[i];
-					Log.e(TAG, codecInfo.getName()+" with color format " + format);           
-				}*/
-			}
-		}
 	}
 
 	/** 

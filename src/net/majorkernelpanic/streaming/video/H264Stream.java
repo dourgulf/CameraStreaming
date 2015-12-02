@@ -26,7 +26,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import net.majorkernelpanic.streaming.mp4.MP4Config;
-import net.majorkernelpanic.streaming.rtp.H264Packetizer;
+import net.majorkernelpanic.streaming.rtmp.H264Packetizer;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.hardware.Camera.CameraInfo;
@@ -35,13 +35,6 @@ import android.os.Environment;
 import android.util.Base64;
 import android.util.Log;
 
-/**
- * A class for streaming H.264 from the camera of an android device using RTP. 
- * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #setDestinationPorts(int)}, 
- * {@link #setVideoSize(int, int)}, {@link #setVideoFramerate(int)} and {@link #setVideoEncodingBitrate(int)} and you're good to go.
- * You can then call {@link #start()}.
- * Call {@link #stop()} to stop the stream.
- */
 public class H264Stream extends VideoStream {
 
 	private SharedPreferences mSettings = null;
@@ -77,18 +70,6 @@ public class H264Stream extends VideoStream {
 	}
 
 	/**
-	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
-	 * Will fail if called when streaming.
-	 */
-	public synchronized  String generateSessionDescription() throws IllegalStateException, IOException {
-		MP4Config config = testH264();
-
-		return "m=video "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
-		"a=rtpmap:96 H264/90000\r\n" +
-		"a=fmtp:96 packetization-mode=1;profile-level-id="+config.getProfileLevel()+";sprop-parameter-sets="+config.getB64SPS()+","+config.getB64PPS()+";\r\n";
-	}	
-
-	/**
 	 * Starts the stream.
 	 * This will also open the camera and dispay the preview 
 	 * if {@link #startPreview()} has not aready been called.
@@ -115,7 +96,7 @@ public class H264Stream extends VideoStream {
 			throw new IllegalStateException("No external storage or external storage not ready !");
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.mp4";
+		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/h264stream-test.mp4";
 
 		Log.i(TAG,"Testing H264 support... Test file saved at: "+TESTFILE);
 
@@ -172,7 +153,6 @@ public class H264Stream extends VideoStream {
 				mLock.release();
 			}
 		});
-
 		// Start recording
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();

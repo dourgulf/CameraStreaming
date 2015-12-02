@@ -24,28 +24,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
 
-import net.majorkernelpanic.streaming.rtp.AACADTSPacketizer;
-import net.majorkernelpanic.streaming.rtp.AACLATMPacketizer;
-import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
+import net.majorkernelpanic.streaming.rtmp.AACADTSPacketizer;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.media.AudioFormat;
 import android.media.AudioRecord;
-import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
-import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.util.Log;
 
-/**
- * A class for streaming AAC from the microphone of an android device using RTP.
- * Call {@link #setDestinationAddress(java.net.InetAddress)} & {@link #start()} and that's it !
- * Call {@link #stop()} to stop the stream.
- */
 public class AACStream extends AudioStream {
 
 	public final static String TAG = "AACStream";
@@ -95,12 +83,7 @@ public class AACStream extends AudioStream {
 			Log.d(TAG,"AAC supported on this phone");
 		}
 
-		if (mMode == MODE_MEDIARECORDER_API) {
-			mPacketizer = new AACADTSPacketizer();
-		} else { 
-			mPacketizer = new AACLATMPacketizer();
-		}
-		
+		mPacketizer = new AACADTSPacketizer();
 	}
 
 	private static boolean AACStreamingSupported() {
@@ -123,7 +106,6 @@ public class AACStream extends AudioStream {
 
 	public void start() throws IllegalStateException, IOException {
 		super.start();
-
 	}
 
 	@Override
@@ -133,133 +115,18 @@ public class AACStream extends AudioStream {
 		super.encodeWithMediaRecorder();
 	}
 
-	@Override
-	@SuppressLint({ "InlinedApi", "NewApi" })
-	protected void encodeWithMediaCodec() throws IOException {
-		
-		// Checks if the user has supplied an exotic sampling rate
-		int i=0;
-		for (;i<AUDIO_SAMPLING_RATES.length;i++) {
-			if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
-				break;
-			}
-		}
-		// If he did, we force a reasonable one: 24 kHz
-		if (i>12) mQuality.samplingRate = 24000;
-		
-		final int bufferSize = AudioRecord.getMinBufferSize(mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)*2;
-		
-		((AACLATMPacketizer)mPacketizer).setSamplingRate(mQuality.samplingRate);
-		
-		mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
-		mMediaCodec = MediaCodec.createEncoderByType("audio/mp4a-latm");
-		MediaFormat format = new MediaFormat();
-		format.setString(MediaFormat.KEY_MIME, "audio/mp4a-latm");
-		format.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitRate);
-		format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-		format.setInteger(MediaFormat.KEY_SAMPLE_RATE, mQuality.samplingRate);
-		format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-		format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, bufferSize);
-		mMediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-		mAudioRecord.startRecording();
-		mMediaCodec.start();
 
-		final MediaCodecInputStream inputStream = new MediaCodecInputStream(mMediaCodec);
-		final ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
-
-		mThread = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				int len = 0, bufferIndex = 0;
-				try {
-					while (!Thread.interrupted()) {
-						bufferIndex = mMediaCodec.dequeueInputBuffer(10000);
-						if (bufferIndex>=0) {
-							inputBuffers[bufferIndex].clear();
-							len = mAudioRecord.read(inputBuffers[bufferIndex], bufferSize);
-							if (len ==  AudioRecord.ERROR_INVALID_OPERATION || len == AudioRecord.ERROR_BAD_VALUE) {
-								Log.e(TAG,"An error occured with the AudioRecord API !");
-							} else {
-								//Log.v(TAG,"Pushing raw audio to the decoder: len="+len+" bs: "+inputBuffers[bufferIndex].capacity());
-								mMediaCodec.queueInputBuffer(bufferIndex, 0, len, System.nanoTime()/1000, 0);
-							}
-						}
-					}
-				} catch (RuntimeException e) {
-					e.printStackTrace();
-				}
-				//Log.e(TAG,"Thread 1 over");
-			}
-		});
-
-		mThread.start();
-
-		try {
-			// mReceiver.getInputStream contains the data from the camera
-			// the packetizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(inputStream);
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
-		}
-
-	}
 
 	/** Stops the stream. */
 	public synchronized void stop() {
 		if (mStreaming) {
-			if (mMode == MODE_MEDIACODEC_API) {
-				Log.d(TAG, "Interrupting threads...");
-				mThread.interrupt();
-				mAudioRecord.stop();
-				mAudioRecord.release();
-				mAudioRecord = null;
-			}
+			Log.d(TAG, "Interrupting threads...");
+			mThread.interrupt();
+			mAudioRecord.stop();
+			mAudioRecord.release();
+			mAudioRecord = null;
 			super.stop();
 		}
-	}
-
-	/**
-	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
-	 * Will fail if called when streaming.
-	 */
-	public String generateSessionDescription() throws IllegalStateException, IOException {
-
-		if (mMode == MODE_MEDIARECORDER_API) {
-
-			testADTS();
-
-			// All the MIME types parameters used here are described in RFC 3640
-			// SizeLength: 13 bits will be enough because ADTS uses 13 bits for frame length
-			// config: contains the object type + the sampling rate + the channel number
-
-			// TODO: streamType always 5 ? profile-level-id always 15 ?
-
-			return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
-			"a=rtpmap:96 mpeg4-generic/"+mActualSamplingRate+"\r\n"+
-			"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
-
-		} else {
-			
-			for (int i=0;i<AUDIO_SAMPLING_RATES.length;i++) {
-				if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
-					mSamplingRateIndex = i;
-					break;
-				}
-			}
-			mProfile = 2; // AAC LC
-			mChannel = 1;
-			mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
-
-			return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
-			"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
-			"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";			
-
-		}
-
 	}
 
 	/** 
@@ -372,8 +239,8 @@ public class AACStream extends AudioStream {
 			editor.commit();
 		}
 
-		if (!file.delete()) Log.e(TAG,"Temp file could not be erased");
-
+		if (!file.delete()) {
+			Log.e(TAG, "Temp file could not be erased");
+		}
 	}
-
 }
