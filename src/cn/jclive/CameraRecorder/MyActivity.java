@@ -10,9 +10,12 @@ import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
+
+//import net.majorkernelpanic.streaming.Session;
+//import net.majorkernelpanic.streaming.SessionBuilder;
+
 import tv.inhand.streaming.Session;
 import tv.inhand.streaming.SessionBuilder;
-
 
 
 public class MyActivity extends Activity implements SurfaceHolder.Callback, OnClickListener {
@@ -49,11 +52,14 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         surfaceHolder = holder;
         try {
+            InetAddress addr = InetAddress.getByName("192.168.50.19");
             SessionBuilder.getInstance()
                     .setContext(getApplicationContext())
                     .setSurfaceHolder(surfaceHolder)
+//            .setDestination(addr)
                     .setHost("192.168.50.19")
                     .setAppName("hls").build();
+            ;
         } catch (Exception e) {
             Log.e(TAG, "Can't build session", e);
         }
@@ -69,7 +75,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
         if (v == start) {
             try {
                 session = SessionBuilder.getInstance().build();
-                session.setStreamName("android");
+//                session.setStreamName("android");
                 session.start();
             } catch (Exception e) {
                 Log.e(TAG, "video session", e);

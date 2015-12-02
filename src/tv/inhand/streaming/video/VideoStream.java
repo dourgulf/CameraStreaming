@@ -329,14 +329,6 @@ public abstract class VideoStream extends MediaStream {
 
 		mMediaRecorder = new MediaRecorder();
 		mMediaRecorder.setCamera(mCamera);
-//		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-//        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-//        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-//        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-//        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-//        mMediaRecorder.setAudioChannels(1);
-//        mMediaRecorder.setAudioEncodingBitRate(64000);
-//        mMediaRecorder.setAudioSamplingRate(44100);
 
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);

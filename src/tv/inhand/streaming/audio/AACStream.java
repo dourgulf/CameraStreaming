@@ -120,11 +120,6 @@ public class AACStream extends AudioStream {
 	/** Stops the stream. */
 	public synchronized void stop() {
 		if (mStreaming) {
-			Log.d(TAG, "Interrupting threads...");
-			mThread.interrupt();
-			mAudioRecord.stop();
-			mAudioRecord.release();
-			mAudioRecord = null;
 			super.stop();
 		}
 	}

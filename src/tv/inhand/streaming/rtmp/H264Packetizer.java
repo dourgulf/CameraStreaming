@@ -37,6 +37,7 @@ import android.util.Log;
 public class H264Packetizer extends BasePacketizer implements Runnable {
 
 	public final static String TAG = "H264Packetizer";
+	private final static int MAXPACKETSIZE = 1400;
 
 	private Thread t = null;
 	private int naluLength = 0;
@@ -69,13 +70,45 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 	public void setStreamParameters(byte[] pps, byte[] sps) {
 		this.pps = pps;
 		this.sps = sps;
-	}	
-	
+	}
+
 	public void run() {
 		long duration = 0, delta2 = 0;
 		Log.d(TAG,"H264 packetizer started !");
+		count = 0;
+
+		// This will skip the MPEG4 header if this step fails we can't stream anything :(
+		try {
+			byte buffer[] = new byte[4];
+			// Skip all atoms preceding mdat atom
+			while (!Thread.interrupted()) {
+				int ch = is.read();
+				while (ch != 'm'){
+					ch = is.read();
+					Log.d(TAG, "skip header:" + ch);
+				}
+//
+//				while (is.read() != 'm');
+				is.read(buffer,0,3);
+				if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') break;
+			}
+		} catch (IOException e) {
+			Log.e(TAG,"Couldn't skip mp4 header :/", e);
+			return;
+		}
+
+		try {
+			byte[] buffer = new byte[1024];
+			while (!Thread.interrupted()) {
+				fill(buffer, 0, buffer.length);
+				Log.i(TAG, "fill 1024");
+			}
+		} catch (IOException e) {
+			Log.e(TAG, "run exception", e);
+		}
 
 		Log.d(TAG,"H264 packetizer stopped !");
+
 	}
 
 	private int fill(byte[] buffer, int offset,int length) throws IOException {

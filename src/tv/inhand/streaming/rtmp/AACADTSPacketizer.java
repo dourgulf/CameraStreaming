@@ -21,6 +21,7 @@
 package tv.inhand.streaming.rtmp;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 import android.util.Log;
 
@@ -72,7 +73,15 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 	public void run() {
 
 		Log.d(TAG,"AAC ADTS packetizer started !");
-
+		try {
+			byte[] buffer = new byte[1024];
+			while (!Thread.interrupted()) {
+				fill(buffer, 0, buffer.length);
+				Log.i(TAG, "fill 1024");
+			}
+		} catch (IOException e) {
+			Log.e(TAG, "run exception", e);
+		}
 		Log.d(TAG,"AAC ADTS packetizer stopped !");
 
 	}
