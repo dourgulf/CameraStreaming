@@ -18,14 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming.rtmp;
+package tv.inhand.streaming.rtmp;
 
 import java.io.IOException;
 
-import net.majorkernelpanic.streaming.audio.AACStream;
-import android.os.SystemClock;
 import android.util.Log;
-import net.majorkernelpanic.streaming.rtmp.BasePacketizer;
 
 /**
  *   

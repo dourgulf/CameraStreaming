@@ -18,14 +18,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming.audio;
+package tv.inhand.streaming.audio;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
 
-import net.majorkernelpanic.streaming.rtmp.AACADTSPacketizer;
+import tv.inhand.streaming.rtmp.AACADTSPacketizer;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -97,8 +97,8 @@ public class AACStream extends AudioStream {
 	}
 
 	/**
-	 * Some data (the actual sampling rate used by the phone and the AAC profile) needs to be stored once {@link #generateSessionDescription()} is called.
-	 * @param prefs The SharedPreferences that will be used to store the sampling rate 
+	 * Some data (the actual sampling rate used by the phone and the AAC profile)
+	 * @param prefs The SharedPreferences that will be used to store the sampling rate
 	 */
 	public void setPreferences(SharedPreferences prefs) {
 		mSettings = prefs;

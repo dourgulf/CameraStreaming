@@ -18,12 +18,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming;
+package tv.inhand.streaming;
 
 import java.io.IOException;
 
 import android.os.ParcelFileDescriptor;
-import net.majorkernelpanic.streaming.rtmp.BasePacketizer;
+import tv.inhand.streaming.rtmp.BasePacketizer;
 import android.annotation.SuppressLint;
 import android.media.MediaRecorder;
 import android.util.Log;

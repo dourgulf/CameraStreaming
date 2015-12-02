@@ -18,18 +18,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming;
+package tv.inhand.streaming;
 
 import java.io.IOException;
 import java.net.InetAddress;
 
 import android.util.Log;
-import net.majorkernelpanic.streaming.audio.AACStream;
-import net.majorkernelpanic.streaming.audio.AudioQuality;
-import net.majorkernelpanic.streaming.audio.AudioStream;
-import net.majorkernelpanic.streaming.video.H264Stream;
-import net.majorkernelpanic.streaming.video.VideoQuality;
-import net.majorkernelpanic.streaming.video.VideoStream;
+import tv.inhand.streaming.audio.AACStream;
+import tv.inhand.streaming.audio.AudioQuality;
+import tv.inhand.streaming.audio.AudioStream;
+import tv.inhand.streaming.video.H264Stream;
+import tv.inhand.streaming.video.VideoQuality;
+import tv.inhand.streaming.video.VideoStream;
 import android.content.Context;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
@@ -112,8 +112,6 @@ public class SessionBuilder {
 			case AUDIO_AAC:
 				AACStream stream = new AACStream();
 				session.addAudioTrack(stream);
-				if (mContext!=null)
-					stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
 				break;
 			default:
 				Log.e(TAG, "Unsupported audio encoder:" + mAudioEncoder);

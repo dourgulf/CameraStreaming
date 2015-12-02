@@ -18,13 +18,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming;
+package tv.inhand.streaming;
 
 import java.io.IOException;
 import java.net.InetAddress;
 
-import net.majorkernelpanic.streaming.audio.AudioStream;
-import net.majorkernelpanic.streaming.video.VideoStream;
+import tv.inhand.streaming.audio.AudioStream;
+import tv.inhand.streaming.video.VideoStream;
 import android.content.Context;
 import android.net.wifi.WifiManager;
 
@@ -115,9 +115,9 @@ public class Session {
 	 */
 	public void setOrigin(InetAddress origin) {
 		mOrigin = origin;
-	}	
+	}
 
-	/** 
+	/**
 	 * The destination address for all the streams of the session.
 	 * You must stop all tracks before calling this method.
 	 * @param destination The destination address

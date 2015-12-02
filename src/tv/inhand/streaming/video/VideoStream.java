@@ -18,22 +18,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming.video;
+package tv.inhand.streaming.video;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
 import android.os.ParcelFileDescriptor;
-import net.majorkernelpanic.streaming.MediaStream;
-import android.annotation.SuppressLint;
-import android.graphics.ImageFormat;
+import tv.inhand.streaming.MediaStream;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.Size;
-import android.media.MediaCodecInfo;
-import android.media.MediaCodecList;
 import android.media.MediaRecorder;
 import android.util.Log;
 import android.view.SurfaceHolder;

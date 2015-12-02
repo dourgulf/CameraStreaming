@@ -1,9 +1,9 @@
-package net.majorkernelpanic.streaming.audio;
+package tv.inhand.streaming.audio;
 
 import java.io.IOException;
 
 import android.os.ParcelFileDescriptor;
-import net.majorkernelpanic.streaming.MediaStream;
+import tv.inhand.streaming.MediaStream;
 import android.media.MediaRecorder;
 import android.util.Log;
 

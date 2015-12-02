@@ -1,4 +1,4 @@
-package net.majorkernelpanic.streaming.rtmp;
+package tv.inhand.streaming.rtmp;
 
 import org.red5.server.stream.message.RTMPMessage;
 
@@ -10,11 +10,14 @@ import java.io.InputStream;
  */
 abstract public class BasePacketizer {
     protected InputStream is = null;
+    protected RTMPPublisher publisher;
     protected byte[] buffer;
 
-    protected long ts = 0, intervalBetweenReports = 5000, delta = 0;
-
     public BasePacketizer() throws IOException {
+    }
+
+    public void setPublisher(RTMPPublisher publisher) {
+        this.publisher = publisher;
     }
 
     public void setInputStream(InputStream is) {

@@ -1,4 +1,4 @@
-package net.majorkernelpanic.streaming.audio;
+package tv.inhand.streaming.audio;
 
 public class AACNotSupportedException extends RuntimeException {
 

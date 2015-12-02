@@ -1,28 +1,18 @@
 package cn.jclive.CameraRecorder;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import android.app.Activity;  
-import android.content.pm.ActivityInfo;  
-import android.graphics.PixelFormat;  
-import android.media.MediaRecorder;  
+import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;  
 import android.view.View;  
-import android.view.View.OnClickListener;  
-import android.view.Window;  
-import android.view.WindowManager;  
+import android.view.View.OnClickListener;
 import android.widget.Button;
-import com.jc.jclive.tools.FileUtils;
-import com.jc.jclive.tools.Logger;
-import net.majorkernelpanic.streaming.Session;
-import net.majorkernelpanic.streaming.SessionBuilder;
+import tv.inhand.streaming.Session;
+import tv.inhand.streaming.SessionBuilder;
 
 public class MyActivity2 extends Activity{
     private static final String TAG = "JCameara";

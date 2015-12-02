@@ -18,12 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming.rtmp;
+package tv.inhand.streaming.rtmp;
 
 import java.io.IOException;
 
 import android.util.Log;
-import net.majorkernelpanic.streaming.rtmp.BasePacketizer;
 
 /**
  * 
@@ -39,8 +38,6 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 
 	public final static String TAG = "H264Packetizer";
 
-	private final static int MAXPACKETSIZE = 1400;
-	
 	private Thread t = null;
 	private int naluLength = 0;
 	private long delay = 0, oldtime = 0;

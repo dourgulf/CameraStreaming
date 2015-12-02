@@ -18,10 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming;
+package tv.inhand.streaming;
 
 import java.io.IOException;
-import java.net.InetAddress;
 
 /**
  * An interface that represents a Stream. 
