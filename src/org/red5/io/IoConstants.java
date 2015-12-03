@@ -169,6 +169,12 @@ public interface IoConstants {
 	 */
 	public static final byte FLAG_CODEC_VP6 = 0x04;
 
+	public static final byte FLAG_CODEC_VP6A = 0x05;
+
+	public static final  byte FLAG_CODEC_SCREEN2 = 0x06;
+
+	public static  final byte FLAG_CODEC_H264 = 0x07;
+
 	/**
 	 * Video frametype flag
 	 */

@@ -72,17 +72,19 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 
 	public void run() {
 
-		Log.d(TAG,"AAC ADTS packetizer started !");
+		Log.i(TAG,"AAC ADTS packetizer started !");
 		try {
 			byte[] buffer = new byte[1024];
 			while (!Thread.interrupted()) {
 				fill(buffer, 0, buffer.length);
-				Log.i(TAG, "fill 1024");
 			}
 		} catch (IOException e) {
-			Log.e(TAG, "run exception", e);
+			Log.e(TAG, "run IOException", e);
+		} catch (Exception e) {
+			Log.e(TAG, "run Exception", e);
 		}
-		Log.d(TAG,"AAC ADTS packetizer stopped !");
+
+		Log.i(TAG,"AAC ADTS packetizer stopped !");
 
 	}
 

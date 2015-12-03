@@ -36,7 +36,7 @@ public abstract class MediaStream implements Stream {
 
 	protected static final String TAG = "MediaStream";
 
-	/** The packetizer that will read the output of the camera and send RTP packets over the network. */
+	/** The packetizer that will read the output of the camera and send packets over the network. */
 	protected BasePacketizer mPacketizer = null;
 
 	protected MediaRecorder mMediaRecorder;
@@ -82,7 +82,9 @@ public abstract class MediaStream implements Stream {
 		if (mStreaming) {
 			mPacketizer.stop();
 			try {
-//				mMediaRecorder.stop();
+				try {
+					mMediaRecorder.stop();
+				}catch (Exception e) {}
 				mMediaRecorder.reset();
 				mMediaRecorder.release();
 				mMediaRecorder = null;

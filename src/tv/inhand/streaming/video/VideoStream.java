@@ -123,7 +123,7 @@ public abstract class VideoStream extends MediaStream {
 				public void surfaceDestroyed(SurfaceHolder holder) {
 					mSurfaceReady = false;
 					stopPreview();
-					Log.d(TAG,"Surface destroyed !");
+					Log.i(TAG,"Surface destroyed !");
 				}
 				@Override
 				public void surfaceCreated(SurfaceHolder holder) {
@@ -131,7 +131,7 @@ public abstract class VideoStream extends MediaStream {
 				}
 				@Override
 				public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-					Log.d(TAG,"Surface Changed !");
+					Log.i(TAG,"Surface Changed !");
 				}
 			};
 			mSurfaceHolder = surfaceHolder;

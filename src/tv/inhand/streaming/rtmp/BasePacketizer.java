@@ -1,6 +1,7 @@
 package tv.inhand.streaming.rtmp;
 
-import net.majorkernelpanic.streaming.rtp.RtpSocket;
+//import net.majorkernelpanic.streaming.rtp.RtpSocket;
+import org.red5.server.messaging.IMessage;
 import org.red5.server.stream.message.RTMPMessage;
 import tv.inhand.streaming.Publisher;
 
@@ -11,13 +12,9 @@ import java.io.InputStream;
  * Created by jinchudarwin on 15/12/2.
  */
 abstract public class BasePacketizer {
-    protected static final int rtphl = 12;
-
     protected InputStream is = null;
     protected Publisher publisher;
     protected byte[] buffer;
-
-    protected long ts = 0, intervalBetweenReports = 5000, delta = 0;
 
     public BasePacketizer() throws IOException {
     }
@@ -38,7 +35,12 @@ abstract public class BasePacketizer {
     public abstract void stop();
 
     /** Updates data for RTCP SR and sends the packet. */
-    protected void send(RTMPMessage message) throws IOException {
+    protected boolean send(IMessage message) throws IOException {
+        if (publisher != null && publisher.getState() == Publisher.PUBLISHED) {
+            publisher.pushMessage(message);
+            return true;
+        }
+        return false;
     }
 
     /** For debugging purposes. */

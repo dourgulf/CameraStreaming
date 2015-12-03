@@ -82,18 +82,19 @@ public class H264Stream extends VideoStream {
 		super.start();
 	}
 
-	private String savedKey() {
+	private String savedH264Key() {
 		return "h264"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
 	}
+
 	// Should not be called by the UI thread
 	private MP4Config testH264() throws IllegalStateException, IOException {
 
 		if (mSettings != null) {
-			String saveKey = savedKey();
+			String saveKey = savedH264Key();
 
 			if (mSettings.contains(saveKey)) {
 				String savedValue = mSettings.getString(saveKey, "");
-				Log.i(TAG, "Read MP4Config:" + savedValue);
+				Log.i(TAG, "Read MP4Config(" + saveKey + "):" + savedValue);
 				String[] values = savedValue.split(",");
 				return new MP4Config(values[0],values[1],values[2]);
 			}
@@ -198,7 +199,7 @@ public class H264Stream extends VideoStream {
 		// Save test result
 		if (mSettings != null) {
 			Editor editor = mSettings.edit();
-			String saveKey = savedKey();
+			String saveKey = savedH264Key();
 			String saveValue = config.getProfileLevel()+","+config.getB64SPS()+","+config.getB64PPS();
 			editor.putString(saveKey, saveValue);
 			editor.commit();

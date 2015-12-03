@@ -42,7 +42,7 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
 
     private String app;
 
-    private int state;
+    private int currentState;
 
     private String publishName;
 
@@ -53,9 +53,13 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
     private RTMPClient rtmpClient;
 
     public int getState() {
-        return state;
+        return currentState;
     }
 
+    synchronized void setState(int state) {
+        this.currentState = state;
+        log.debug("state:{}", state);
+    }
     public void setHost(String host) {
         this.host = host;
     }
@@ -69,7 +73,7 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
     }
 
     public synchronized void start(String publishName, String publishMode, Object[] params) {
-        state = CONNECTING;
+        setState(CONNECTING);
         this.publishName = publishName;
         this.publishMode = publishMode;
         rtmpClient = new RTMPClient();
@@ -79,14 +83,15 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
     }
 
     public synchronized void stop() {
-        if (state >= STREAM_CREATING) {
+        if (getState() >= STREAM_CREATING) {
             rtmpClient.disconnect();
         }
-        state = STOPPED;
+        setState(STOPPED);
     }
 
+
     synchronized public void pushMessage(IMessage message) throws IOException {
-        if (state >= PUBLISHED && message instanceof RTMPMessage) {
+        if (getState() >= PUBLISHED && message instanceof RTMPMessage) {
             RTMPMessage rtmpMsg = (RTMPMessage) message;
             rtmpClient.publishStreamData(streamId, rtmpMsg);
         } else {
@@ -100,7 +105,7 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
         String code = (String) map.get("code");
         log.debug("<:{}", code);
         if (StatusCodes.NS_PUBLISH_START.equals(code)) {
-            state = PUBLISHED;
+            setState(PUBLISHED);
             while (frameBuffer.size() > 0) {
                 rtmpClient.publishStreamData(streamId, frameBuffer.remove(0));
             }
@@ -110,10 +115,10 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
     public synchronized void resultReceived(IPendingServiceCall call) {
         log.debug("resultReceived:> {}", call.getServiceMethodName());
         if ("connect".equals(call.getServiceMethodName())) {
-            state = STREAM_CREATING;
+            setState(STREAM_CREATING);
             rtmpClient.createStream(this);
         } else if ("createStream".equals(call.getServiceMethodName())) {
-            state = PUBLISHING;
+            setState(PUBLISHING);
             Object result = call.getResult();
             if (result instanceof Integer) {
                 Integer streamIdInt = (Integer) result;
@@ -121,7 +126,7 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
                 rtmpClient.publish(streamIdInt.intValue(), publishName, publishMode, this);
             } else {
                 rtmpClient.disconnect();
-                state = STOPPED;
+                setState(STOPPED);
             }
         }
     }

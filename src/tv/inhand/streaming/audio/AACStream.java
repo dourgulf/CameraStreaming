@@ -24,6 +24,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import tv.inhand.streaming.rtmp.AACADTSPacketizer;
 import android.annotation.SuppressLint;
@@ -70,8 +72,11 @@ public class AACStream extends AudioStream {
 	private int mActualSamplingRate;
 	private int mProfile, mSamplingRateIndex, mChannel, mConfig;
 	private SharedPreferences mSettings = null;
+
 	private AudioRecord mAudioRecord = null;
 	private Thread mThread = null;
+
+	private Semaphore mLock = new Semaphore(0);
 
 	public AACStream() throws IOException {
 		super();
@@ -124,6 +129,9 @@ public class AACStream extends AudioStream {
 		}
 	}
 
+	String savedADTSKey() {
+		return "aac-"+mQuality.samplingRate;
+	}
 	/** 
 	 * Records a short sample of AAC ADTS from the microphone to find out what the sampling rate really is
 	 * On some phone indeed, no error will be reported if the sampling rate used differs from the 
@@ -156,16 +164,18 @@ public class AACStream extends AudioStream {
 		}
 		
 		if (mSettings!=null) {
-			if (mSettings.contains("aac-"+mQuality.samplingRate)) {
-				String[] s = mSettings.getString("aac-"+mQuality.samplingRate, "").split(",");
+			String savedKey = savedADTSKey();
+			if (mSettings.contains(savedKey)) {
+				String[] s = mSettings.getString(savedKey, "").split(",");
 				mActualSamplingRate = Integer.valueOf(s[0]);
 				mConfig = Integer.valueOf(s[1]);
 				mChannel = Integer.valueOf(s[2]);
+				Log.i(TAG, "Read ADTS config(" + savedKey + "):" + mActualSamplingRate + "," + mConfig + "," + mChannel);
 				return;
 			}
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";
+		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/adtsstream-test.adts";
 
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("No external storage or external storage not ready !");
@@ -185,6 +195,7 @@ public class AACStream extends AudioStream {
 		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
 		mMediaRecorder.setOutputFile(TESTFILE);
 		mMediaRecorder.setMaxDuration(1000);
+
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
 
@@ -194,10 +205,14 @@ public class AACStream extends AudioStream {
 			Thread.sleep(2000);
 		} catch (InterruptedException e) {}
 
-		mMediaRecorder.stop();
+
+		try {
+			mMediaRecorder.stop();
+		} catch (Exception e) {}
 		mMediaRecorder.reset();
 		mMediaRecorder.release();
 		mMediaRecorder = null;
+
 
 		File file = new File(TESTFILE);
 		RandomAccessFile raf = new RandomAccessFile(file, "r");
@@ -230,7 +245,7 @@ public class AACStream extends AudioStream {
 
 		if (mSettings!=null) {
 			Editor editor = mSettings.edit();
-			editor.putString("aac-"+mQuality.samplingRate, mActualSamplingRate+","+mConfig+","+mChannel);
+			editor.putString(savedADTSKey(), mActualSamplingRate+","+mConfig+","+mChannel);
 			editor.commit();
 		}
 

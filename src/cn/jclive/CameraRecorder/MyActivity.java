@@ -54,6 +54,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
         try {
             InetAddress addr = InetAddress.getByName("192.168.50.19");
             SessionBuilder.getInstance()
+                    // 设置一个context可以不用每次都监测MPEG的参数
                     .setContext(getApplicationContext())
                     .setSurfaceHolder(surfaceHolder)
 //            .setDestination(addr)
@@ -75,7 +76,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
         if (v == start) {
             try {
                 session = SessionBuilder.getInstance().build();
-//                session.setStreamName("android");
+//                session.startPublisher("android001");
                 session.start();
             } catch (Exception e) {
                 Log.e(TAG, "video session", e);
@@ -84,6 +85,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
         }
         if (v == stop) {
             if (session != null) {
+//                session.stopPublisher();
                 session.stop();
             }
         }

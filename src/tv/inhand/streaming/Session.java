@@ -46,10 +46,7 @@ public class Session {
 	private AudioStream mAudioStream = null;
 	private VideoStream mVideoStream = null;
 
-
-
 	private Publisher mPublisher;
-	private String mStreamName;
 
 	/**
 	 * Creates a streaming session that can be customized by adding tracks.
@@ -57,9 +54,6 @@ public class Session {
 	public Session() {
 	}
 
-	public void setStreamName(String streamName) {
-		mStreamName = streamName;
-	}
 
 	public void addPublisheer(Publisher publisher) {
 		mPublisher = publisher;
@@ -135,10 +129,6 @@ public class Session {
 	public void start() throws IllegalStateException, IOException {
 		start(0);
 		start(1);
-//		if (mStreamName == null) {
-//			throw new IllegalStateException("Stream name missed");
-//		}
-//		mPublisher.start(mStreamName, "live", null);
 	}
 
 	/** 
@@ -165,9 +155,20 @@ public class Session {
 	public void stop() {
 		stop(0);
 		stop(1);
-//		mPublisher.stop();
 	}
 
+	public void startPublisher(String streamName) throws IOException {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				mPublisher.start(streamName, "live", null);
+			}
+		}).start();
+	}
+
+	public void stopPublisher() {
+		mPublisher.stop();
+	}
 	/** Deletes all existing tracks & release associated resources. */
 	public void flush() {
 		synchronized (sLock) {
