@@ -28,9 +28,6 @@ import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.io.IoConstants;
 import org.red5.io.flv.Tag;
 import org.red5.server.messaging.IMessage;
-import org.red5.server.net.rtmp.event.*;
-import org.red5.server.net.rtmp.message.Constants;
-import org.red5.server.stream.message.RTMPMessage;
 
 /**
  * 
@@ -52,8 +49,6 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 
 	private Thread t = null;
 	private int naluLength = 0;
-	private long timeBase = 0;
-	private int prevSize = 0;
 	private byte[] sps = null, pps = null;
 	private boolean sentConfig = false;
 	
@@ -81,6 +76,8 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 	public void setStreamParameters(byte[] pps, byte[] sps) {
 		this.pps = pps;
 		this.sps = sps;
+		Log.i(TAG, "PPS:" + printBuffer(pps, 0, pps.length));
+		Log.i(TAG, "SPS:" + printBuffer(sps, 0, sps.length));
 	}
 
 	public void run() {
@@ -106,39 +103,63 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 
 		try {
 			while (!Thread.interrupted()) {
-				IMessage msg = fillMessage();
-				if (msg != null) {
-					super.send(msg);
+				try {
+					processNalu(fillNalu());
+				} catch (IOException e) {
+					Log.e(TAG, "run IOException", e);
 				}
 			}
-		} catch (IOException e) {
-			Log.e(TAG, "run IOException", e);
 		} catch (Exception e) {
 			Log.e(TAG, "run Exception", e);
 		}
 
-		Log.i(TAG,"H264 packetizer stopped !");
+		Log.i(TAG, "H264 packetizer stopped !");
 
 	}
 
-	private IMessage fillMessage() throws IOException{
-		byte[] header = new byte[5];
+	private byte[] fillNalu()  throws IOException{
+		byte[] header = new byte[4];
 
 		// Read NAL unit length (4 bytes) and NAL unit header (1 byte)
 		fill(header, 0, 4);
 		naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
-		Log.i(TAG, "NALU length:" + naluLength);
 
 		if (naluLength>MAX_VALID_NALU_LENGTH || naluLength<0)
 			resync();
 
-		byte[] frameData = new byte[naluLength + header.length];
-		System.arraycopy(frameData, 0, header, 0, header.length);
+		byte[] nalu = new byte[naluLength + header.length];
+		System.arraycopy(header, 0, nalu, 0, header.length);
 
-		fill(frameData, header.length, naluLength);	// We had fill the first byte
+		fill(nalu, header.length, naluLength);	// We had fill the first byte
+		return nalu;
+	}
 
-		int dts = 0; 	// TODO: 使用正确的DTS和PTS
-		int pts = 0;	// TODO:
+	private void processNalu(byte[] nalu) throws IOException {
+		// TODO: 还需要处理分片的情况
+
+		int nalType = nalu[4] & 0x1F;
+		Log.i(TAG, "NAL type:" + nalType);
+		if (nalType == 5) {
+			if (sentConfig) {
+				Log.i(TAG, "Already sent configuration");
+			}
+			else {
+				Log.i(TAG, "Send configuration one time");
+				byte[] conf = configurationFromSpsAndPps();
+				writeVideoFrame(conf, true, true);
+				sentConfig = true;
+			}
+		}
+		writeVideoFrame(nalu, false, (nalType == 5));
+	}
+
+	private void writeVideoFrame(byte[] frameData, boolean configuration, boolean keyframe) throws IOException {
+		byte flag = IoConstants.FLAG_CODEC_H264;
+		if (keyframe) {
+			flag |= (IoConstants.FLAG_FRAMETYPE_KEYFRAME << 4);
+		}else {
+			flag |= (IoConstants.FLAG_FRAMETYPE_INTERFRAME << 4);
+		}
 
 		long timestamp = System.currentTimeMillis();
 		if (timeBase == 0) {
@@ -148,60 +169,20 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		Tag tag = new Tag(IoConstants.TYPE_VIDEO, currentTime, frameData.length+flagSize, null, prevSize);
 		prevSize = frameData.length;
 
-
-		int nalType = frameData[4] & 0x1F;
-		boolean isConfig = (nalType == 7 || nalType == 8);
-		byte flag = IoConstants.FLAG_CODEC_H264;
-		switch (nalType) {
-			case 7:
-			{
-				if (sps == null || sps.length == 0) {
-					sps = new byte[frameData.length-4];
-					System.arraycopy(frameData, 4, sps, 0, frameData.length-4);
-					Log.i(TAG, "SPS changed??");
-				}
-			}
-				break;
-			case 8:
-			{
-				if (pps == null || pps.length == 0) {
-					pps = new byte[frameData.length - 4];
-					System.arraycopy(frameData, 4, pps, 0, frameData.length-4);
-					Log.i(TAG, "PPS changed??");
-				}
-			}
-			flag |= (IoConstants.FLAG_FRAMETYPE_KEYFRAME << 4);
-				break;
-			case 5:
-				flag |= (IoConstants.FLAG_FRAMETYPE_KEYFRAME << 4);
-				break;
-			default:
-				flag |= (IoConstants.FLAG_FRAMETYPE_INTERFRAME << 4);
-				break;
-		}
 		IoBuffer body = IoBuffer.allocate(tag.getBodySize());
 
 		body.setAutoExpand(true);
 		body.put(flag);
-		body.put(isConfig?(byte)0:(byte)1);
+		body.put(configuration?(byte)0:(byte)1);
+
+		int dts = 0; 	// TODO: 使用正确的DTS和PTS
+		int pts = 0;	// TODO:
 		int delay = dts - pts;
 		// TODO: add 'delay' value. Use 0 for test only
-//		body.put(delay, 32);
+//		body.put(delay, 24bit);
 		body.put((byte)0);
 		body.put((byte)0);
 		body.put((byte)0);
-
-		if (isConfig && sps != null && pps != null) {
-			if (!sentConfig) {
-				frameData = configurationFromSpsAndPps();
-				Log.i(TAG, "Sent configuration:" + printBuffer(frameData, 0, frameData.length));
-				sentConfig = true;
-			}
-			else {
-				Log.i(TAG, "Configuration already sent, ignore it!");
-				return null;
-			}
-		}
 
 		body.put(frameData);
 
@@ -209,10 +190,19 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		body.limit(tag.getBodySize());
 		tag.setBody(body);
 
-		return makeMessageFromTag(tag);
+		byte[] data = body.array();
+		Log.i(TAG, "\nvideo body:" + tag.getBodySize() + ":\n" + printBuffer(data, 0, tag.getBodySize()<64? tag.getBodySize() : 64));
+
+		IMessage msg = makeMessageFromTag(tag);
+		send(msg);
 	}
 
 	private byte[] configurationFromSpsAndPps() {
+		if (sps == null || pps == null) {
+			Log.e(TAG, "Invalid sps or pps");
+			throw new IllegalStateException("SPS|PPS missed");
+		}
+
 		IoBuffer conf = IoBuffer.allocate(9);
 		conf.setAutoExpand(true);
 		conf.put((byte)1);	// version
@@ -222,48 +212,24 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		conf.put((byte)0xff);	// 6 bits reserved + 2 bits nal size length - 1 (11)
 		conf.put((byte)0xe1); 	// 3 bits reserved + 5 bits number of sps (00001)
 
-		IoBuffer beBuf = IoBuffer.allocate(4);
-		beBuf = beBuf.order(ByteOrder.BIG_ENDIAN);
-		beBuf.putShort((short)sps.length);
-		conf.put(beBuf.array());
-		beBuf.reset();
+		{
+			IoBuffer beBuf = IoBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
+			beBuf.putShort((short) sps.length);
+			conf.put(beBuf.array());
+		}
 		conf.put(sps);
 
 		conf.put((byte)1);
-		beBuf.putShort((short)pps.length);
-		conf.put(beBuf.array());
-		beBuf.reset();
+		{
+			IoBuffer beBuf = IoBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
+			beBuf.putShort((short) pps.length);
+			conf.put(beBuf.array());
+		}
 		conf.put(pps);
 
 		return conf.array();
 	}
-	private RTMPMessage makeMessageFromTag(Tag tag) {
-		IRTMPEvent msg = null;
-		switch (tag.getDataType()) {
-			case Constants.TYPE_AUDIO_DATA:
-				msg = new AudioData(tag.getBody());
-				break;
-			case Constants.TYPE_VIDEO_DATA:
-				msg = new VideoData(tag.getBody());
-				break;
-			case Constants.TYPE_INVOKE:
-				msg = new Invoke(tag.getBody());
-				break;
-			case Constants.TYPE_NOTIFY:
-				msg = new Notify(tag.getBody());
-				break;
-			case Constants.TYPE_FLEX_STREAM_SEND:
-				msg = new FlexStreamSend(tag.getBody());
-				break;
-			default:
-				msg = new Unknown(tag.getDataType(), tag.getBody());
-		}
-		msg.setTimestamp(tag.getTimestamp());
-		RTMPMessage rtmpMsg = new RTMPMessage();
-		rtmpMsg.setBody(msg);
-		rtmpMsg.getBody();
-		return rtmpMsg;
-	}
+
 	private int fill(byte[] buffer, int offset,int length) throws IOException {
 		int sum = 0, len;
 
@@ -296,7 +262,6 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 			if (type == 5 || type == 1) {
 				naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
 				if (naluLength>0 && naluLength<MAX_VALID_NALU_LENGTH) {
-//					oldtime = System.currentTimeMillis();
 					Log.e(TAG,"A NAL unit may have been found in the bit stream !");
 					break;
 				}

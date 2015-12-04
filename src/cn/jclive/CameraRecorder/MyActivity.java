@@ -76,7 +76,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
         if (v == start) {
             try {
                 session = SessionBuilder.getInstance().build();
-//                session.startPublisher("android001");
+                session.startPublisher("android001");
                 session.start();
             } catch (Exception e) {
                 Log.e(TAG, "video session", e);
@@ -85,7 +85,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
         }
         if (v == stop) {
             if (session != null) {
-//                session.stopPublisher();
+                session.stopPublisher();
                 session.stop();
             }
         }

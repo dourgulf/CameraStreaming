@@ -149,6 +149,8 @@ public interface IoConstants {
 	 */
 	public static final byte FLAG_FORMAT_SPEEX = 0x0b;
 
+
+	public static final byte FLAG_FORMAT_AAC                  = 0x0a;
 	/**
 	 * Mask video codec
 	 */
