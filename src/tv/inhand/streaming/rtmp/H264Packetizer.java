@@ -146,14 +146,14 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 			else {
 				Log.i(TAG, "Send configuration one time");
 				byte[] conf = configurationFromSpsAndPps();
-				writeVideoFrame(conf, true, true);
+				writeVideoNalu(conf, true, true);
 				sentConfig = true;
 			}
 		}
-		writeVideoFrame(nalu, false, (nalType == 5));
+		writeVideoNalu(nalu, false, (nalType == 5));
 	}
 
-	private void writeVideoFrame(byte[] frameData, boolean configuration, boolean keyframe) throws IOException {
+	private void writeVideoNalu(byte[] nalu, boolean configuration, boolean keyframe) throws IOException {
 		byte flag = IoConstants.FLAG_CODEC_H264;
 		if (keyframe) {
 			flag |= (IoConstants.FLAG_FRAMETYPE_KEYFRAME << 4);
@@ -166,8 +166,8 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 			timeBase = timestamp;
 		}
 		int currentTime = (int) (timestamp - timeBase);
-		Tag tag = new Tag(IoConstants.TYPE_VIDEO, currentTime, frameData.length+flagSize, null, prevSize);
-		prevSize = frameData.length;
+		Tag tag = new Tag(IoConstants.TYPE_VIDEO, currentTime, nalu.length+flagSize, null, prevSize);
+		prevSize = nalu.length;
 
 		IoBuffer body = IoBuffer.allocate(tag.getBodySize());
 
@@ -177,14 +177,11 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 
 		int dts = 0; 	// TODO: 使用正确的DTS和PTS
 		int pts = 0;	// TODO:
-		int delay = dts - pts;
 		// TODO: add 'delay' value. Use 0 for test only
-//		body.put(delay, 24bit);
-		body.put((byte)0);
-		body.put((byte)0);
-		body.put((byte)0);
+		int delay = dts - pts;
+		body.put(be24(delay));
 
-		body.put(frameData);
+		body.put(nalu);
 
 		body.flip();
 		body.limit(tag.getBodySize());
@@ -212,19 +209,11 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		conf.put((byte)0xff);	// 6 bits reserved + 2 bits nal size length - 1 (11)
 		conf.put((byte)0xe1); 	// 3 bits reserved + 5 bits number of sps (00001)
 
-		{
-			IoBuffer beBuf = IoBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
-			beBuf.putShort((short) sps.length);
-			conf.put(beBuf.array());
-		}
+		conf.put(be16((short)sps.length));
 		conf.put(sps);
 
 		conf.put((byte)1);
-		{
-			IoBuffer beBuf = IoBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
-			beBuf.putShort((short) pps.length);
-			conf.put(beBuf.array());
-		}
+		conf.put(be16((short)pps.length));
 		conf.put(pps);
 
 		return conf.array();

@@ -118,6 +118,34 @@ abstract public class BasePacketizer {
         return rtmpMsg;
     }
 
+    public static byte[] be16(short val)
+    {
+        byte[] buf = new byte[2];
+        buf[1] = (byte)(val & 0xff);
+        buf[0] = (byte)((val >> 8) & 0xff);
+
+        return buf;
+    }
+
+    public static byte[] be24(int val)
+    {
+        byte[] buf = new byte[3];
+
+        buf[2] = (byte)(val & 0xff);
+        buf[1] = (byte)((val >> 8) & 0xff);
+        buf[0] = (byte)((val >> 16) & 0xff);
+        return buf;
+    }
+    public static byte[] be32(int val) {
+        byte[] buf = new byte[4];
+
+        buf[4] = (byte)(val & 0xff);
+        buf[2] = (byte)((val >> 8) & 0xff);
+        buf[1] = (byte)((val >> 16) & 0xff);
+        buf[0] = (byte)((val >> 24) & 0xff);
+        return buf;
+    }
+
     /** For debugging purposes. */
     protected static String printBuffer(byte[] buffer, int start,int end) {
         StringBuilder str = new StringBuilder();
