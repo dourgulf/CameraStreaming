@@ -23,6 +23,7 @@ package tv.inhand.streaming;
 import java.io.IOException;
 
 import tv.inhand.streaming.audio.AudioStream;
+import tv.inhand.streaming.rtmp.Publisher;
 import tv.inhand.streaming.video.VideoStream;
 import android.content.Context;
 import android.net.wifi.WifiManager;

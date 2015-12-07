@@ -73,11 +73,6 @@ public class AACStream extends AudioStream {
 	private int mProfile, mSamplingRateIndex, mChannel, mConfig;
 	private SharedPreferences mSettings = null;
 
-	private AudioRecord mAudioRecord = null;
-	private Thread mThread = null;
-
-	private Semaphore mLock = new Semaphore(0);
-
 	public AACStream() throws IOException {
 		super();
 		

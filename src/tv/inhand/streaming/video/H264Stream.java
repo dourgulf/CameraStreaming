@@ -83,7 +83,7 @@ public class H264Stream extends VideoStream {
 	}
 
 	private String savedH264Key() {
-		return "h264"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
+		return "h264"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY+","+mQuality.orientation;
 	}
 
 	// Should not be called by the UI thread
@@ -133,15 +133,17 @@ public class H264Stream extends VideoStream {
 		unlockCamera();
 
 		mMediaRecorder = new MediaRecorder();
-		mMediaRecorder.setCamera(mCamera);
-		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+		initRecorderParameters();
+//		mMediaRecorder.setCamera(mCamera);
+//		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+//		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
 		mMediaRecorder.setMaxDuration(1000);
-		mMediaRecorder.setVideoEncoder(mVideoEncoder);
-		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
-		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
-		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
-		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+//		mMediaRecorder.setVideoEncoder(mVideoEncoder);
+//		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+//		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
+//		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
+//		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+
 		mMediaRecorder.setOutputFile(TESTFILE);
 
 		// We wait a little and stop recording

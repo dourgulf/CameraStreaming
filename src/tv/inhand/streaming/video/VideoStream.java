@@ -305,6 +305,20 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	/**
+	 * initialize the parameters of recorder
+	 */
+	protected void initRecorderParameters() {
+		mMediaRecorder.setCamera(mCamera);
+		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+		mMediaRecorder.setVideoEncoder(mVideoEncoder);
+		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
+		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
+		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+		mMediaRecorder.setOrientationHint(mQuality.orientation);
+	}
+	/**
 	 * Encoding of the audio/video is done by a MediaRecorder.
 	 */
 	protected void encodeWithMediaRecorder() throws IOException {
@@ -328,15 +342,7 @@ public abstract class VideoStream extends MediaStream {
 		unlockCamera();
 
 		mMediaRecorder = new MediaRecorder();
-		mMediaRecorder.setCamera(mCamera);
-
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-		mMediaRecorder.setVideoEncoder(mVideoEncoder);
-		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
-		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
-		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
-		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+		initRecorderParameters();
 
 		// We write the ouput of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera

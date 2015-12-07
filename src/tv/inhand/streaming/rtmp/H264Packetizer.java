@@ -104,7 +104,8 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		try {
 			while (!Thread.interrupted()) {
 				try {
-					processNalu(fillNalu());
+                    byte[] nalu = fillNalu();
+					processNalu(nalu);
 				} catch (IOException e) {
 					Log.e(TAG, "run IOException", e);
 				}
@@ -120,9 +121,9 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 	private byte[] fillNalu()  throws IOException{
 		byte[] header = new byte[4];
 
-		// Read NAL unit length (4 bytes) and NAL unit header (1 byte)
+		// Read NAL unit length
 		fill(header, 0, 4);
-		naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
+		naluLength = be32(header);
 
 		if (naluLength>MAX_VALID_NALU_LENGTH || naluLength<0)
 			resync();
@@ -138,7 +139,6 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		// TODO: 还需要处理分片的情况
 
 		int nalType = nalu[4] & 0x1F;
-		Log.i(TAG, "NAL type:" + nalType);
 		if (nalType == 5) {
 			if (sentConfig) {
 				Log.i(TAG, "Already sent configuration");
@@ -146,14 +146,17 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 			else {
 				Log.i(TAG, "Send configuration one time");
 				byte[] conf = configurationFromSpsAndPps();
-				writeVideoNalu(conf, true, true);
+				writeVideoNalu(conf, 0, true);
 				sentConfig = true;
 			}
 		}
-		writeVideoNalu(nalu, false, (nalType == 5));
+        if (nalType == 7 || nalType == 8) {
+            Log.w(TAG, "Received SPS/PPS frame, ignored");
+        }
+		writeVideoNalu(nalu, 1, (nalType == 5));
 	}
 
-	private void writeVideoNalu(byte[] nalu, boolean configuration, boolean keyframe) throws IOException {
+	private void writeVideoNalu(byte[] nalu, int avctype, boolean keyframe) throws IOException {
 		byte flag = IoConstants.FLAG_CODEC_H264;
 		if (keyframe) {
 			flag |= (IoConstants.FLAG_FRAMETYPE_KEYFRAME << 4);
@@ -167,18 +170,18 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		}
 		int currentTime = (int) (timestamp - timeBase);
 		Tag tag = new Tag(IoConstants.TYPE_VIDEO, currentTime, nalu.length+flagSize, null, prevSize);
-		prevSize = nalu.length;
+		prevSize = nalu.length+flagSize;
 
 		IoBuffer body = IoBuffer.allocate(tag.getBodySize());
 
 		body.setAutoExpand(true);
 		body.put(flag);
-		body.put(configuration?(byte)0:(byte)1);
+		body.put((byte)avctype);
 
 		int dts = 0; 	// TODO: 使用正确的DTS和PTS
 		int pts = 0;	// TODO:
-		// TODO: add 'delay' value. Use 0 for test only
-		int delay = dts - pts;
+		// TODO: if x264 come with B-frame, delay must set to correct value.
+		int delay = (pts-dts)/90;
 		body.put(be24(delay));
 
 		body.put(nalu);
@@ -186,9 +189,6 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		body.flip();
 		body.limit(tag.getBodySize());
 		tag.setBody(body);
-
-		byte[] data = body.array();
-		Log.i(TAG, "\nvideo body:" + tag.getBodySize() + ":\n" + printBuffer(data, 0, tag.getBodySize()<64? tag.getBodySize() : 64));
 
 		IMessage msg = makeMessageFromTag(tag);
 		send(msg);

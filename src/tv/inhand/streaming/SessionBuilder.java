@@ -29,6 +29,7 @@ import android.view.SurfaceHolder;
 import tv.inhand.streaming.audio.AACStream;
 import tv.inhand.streaming.audio.AudioQuality;
 import tv.inhand.streaming.audio.AudioStream;
+import tv.inhand.streaming.rtmp.Publisher;
 import tv.inhand.streaming.video.H264Stream;
 import tv.inhand.streaming.video.VideoQuality;
 import tv.inhand.streaming.video.VideoStream;

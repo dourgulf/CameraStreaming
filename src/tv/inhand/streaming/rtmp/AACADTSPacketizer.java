@@ -24,11 +24,14 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 
 import android.util.Log;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.red5.io.IoConstants;
 import org.red5.io.flv.Tag;
 import org.red5.server.messaging.IMessage;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
 import org.red5.server.stream.message.RTMPMessage;
+import tv.inhand.streaming.audio.AACStream;
 
 /**
  *   
@@ -43,9 +46,13 @@ import org.red5.server.stream.message.RTMPMessage;
 public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 
 	private final static String TAG = "AACADTSPacketizer";
+	private final static int flagSize = 2;
 
 	private Thread t;
 	private int samplingRate = 8000;
+	private int samplingRateIndex;
+	private boolean sendAsc = false;
+	private byte asc[] = new byte[2];
 
 	public AACADTSPacketizer() throws IOException {
 		super();
@@ -81,7 +88,8 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 		try {
 			byte[] buffer = new byte[1024];
 			while (!Thread.interrupted()) {
-				fill(buffer, 0, buffer.length);
+				byte[] frameBuf = fillFrame();
+				processFrame(frameBuf);
 			}
 		} catch (IOException e) {
 			Log.e(TAG, "run IOException", e);
@@ -93,7 +101,109 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 
 	}
 
+	private byte[] fillFrame()  throws IOException{
+		byte[] header = new byte[8];
+		// Synchronisation: ADTS packet starts with 12bits set to 1
+		while (true) {
+			if ( (is.read()&0xFF) == 0xFF ) {
+				header[1] = (byte) is.read();
+				if ( (header[1]&0xF0) == 0xF0) break;
+			}
+		}
 
+		// Parse adts header (ADTS packets start with a 7 or 9 byte long header)
+		fill(header, 2, 5);
+
+		// The protection bit indicates whether or not the header contains the two extra bytes
+		boolean protection = (header[1]&0x01)>0 ? true : false;
+
+		int frameLength = (header[3]&0x03) << 11 |
+				(header[4]&0xFF) << 3 |
+				(header[5]&0xFF) >> 5 ;
+		frameLength -= (protection ? 7 : 9);
+
+		// Number of AAC frames in the ADTS frame
+		int nbau = (header[6]&0x03) + 1;
+
+		// Read CRS if any
+		if (!protection) {
+			is.read(header, 0, 2);
+		}
+
+		samplingRateIndex = (header[2]&0x3C) >> 2;
+		samplingRate = AACStream.AUDIO_SAMPLING_RATES[samplingRateIndex];
+
+		int profile = ( (header[2]&0xC0) >> 6 ) + 1 ;
+
+		Log.i(TAG,"frameLength: "+frameLength+" protection: "+protection+" p: "+profile+" sr: "+samplingRate+ ", header:" + printBuffer(header, 0, header.length));
+
+		byte[] frameBuf = new byte[frameLength + 5];
+		System.arraycopy(header, 1, frameBuf, 0, 5);
+		fill(frameBuf, 5, frameLength);
+		return frameBuf;
+	}
+
+	private void processFrame(byte[] frame) throws IOException {
+		if (!sendAsc) {
+			makeAsc((byte)samplingRateIndex, (byte)2);
+			writeAudioBuffer(asc, 0);
+			sendAsc = true;
+		}
+		writeAudioBuffer(frame, 1);
+	}
+	private void writeAudioBuffer(byte[] buf, int avctype) throws IOException{
+		long timestamp = System.currentTimeMillis();
+
+		if (timeBase == 0) {
+			timeBase = timestamp;
+		}
+		currentTime = (int) (timestamp - timeBase);
+		Tag tag = new Tag(IoConstants.TYPE_AUDIO, currentTime, buf.length + flagSize, null,
+				prevSize);
+		prevSize = buf.length + flagSize;
+
+		byte tagType = (byte) ((IoConstants.FLAG_FORMAT_AAC << 4))
+				| (IoConstants.FLAG_SIZE_16_BIT << 1);
+
+		tagType |= IoConstants.FLAG_RATE_44_KHZ << 2;
+        switch (samplingRate) {
+            case 44100:
+                tagType |= IoConstants.FLAG_RATE_44_KHZ << 2;
+                break;
+            case 22050:
+                tagType |= IoConstants.FLAG_RATE_22_KHZ << 2;
+                break;
+            case 11025:
+                tagType |= IoConstants.FLAG_RATE_11_KHZ << 2;
+                break;
+            default:
+                tagType |= IoConstants.FLAG_RATE_5_5_KHZ << 2;
+        }
+
+		tagType |= IoConstants.FLAG_TYPE_STEREO;
+
+		IoBuffer body = IoBuffer.allocate(tag.getBodySize());
+		body.setAutoExpand(true);
+		body.put(tagType);
+		body.put((byte)avctype);
+		body.put(buf);
+		body.flip();
+		body.limit(tag.getBodySize());
+		tag.setBody(body);
+
+		byte[] bodyBuf = body.array();
+
+		Log.i(TAG, "frame buffer:" + printBuffer(bodyBuf, 0, tag.getBodySize()<64?tag.getBodySize():64));
+
+		IMessage msg = makeMessageFromTag(tag);
+		send(msg);
+	}
+	private void makeAsc(byte sampleRateIndex, byte channelCount)
+	{
+		// http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
+		asc[0] = (byte) ( 0x10 | ((sampleRateIndex>>1) & 0x3) );
+		asc[1] = (byte) ( ((sampleRateIndex & 0x1)<<7) | ((channelCount & 0xF) << 3) );
+	}
 
 	private int fill(byte[] buffer, int offset,int length) throws IOException {
 		int sum = 0, len;

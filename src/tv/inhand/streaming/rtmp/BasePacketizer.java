@@ -1,14 +1,11 @@
 package tv.inhand.streaming.rtmp;
 
 //import net.majorkernelpanic.streaming.rtp.RtpSocket;
-import org.apache.mina.core.buffer.IoBuffer;
-import org.red5.io.IoConstants;
 import org.red5.io.flv.Tag;
 import org.red5.server.messaging.IMessage;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
 import org.red5.server.stream.message.RTMPMessage;
-import tv.inhand.streaming.Publisher;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,7 +16,6 @@ import java.io.InputStream;
 abstract public class BasePacketizer {
     protected InputStream is = null;
     protected Publisher publisher;
-    protected byte[] buffer;
 
     protected int currentTime = 0;
     protected long timeBase = 0;
@@ -44,52 +40,15 @@ abstract public class BasePacketizer {
     /** Stops the packetizer. */
     public abstract void stop();
 
+    /**
+     * Send a message to publisher
+     * @param message
+     * @throws IOException
+     */
     protected void send(IMessage message) throws IOException {
         publisher.pushMessage(message);
     }
-    public void writeAudioBuffer(byte[] buf, int size, long ts) {
-        if (timeBase == 0) {
-            timeBase = ts;
-        }
-        currentTime = (int) (ts - timeBase);
-        Tag tag = new Tag(IoConstants.TYPE_AUDIO, currentTime, size + 1, null,
-                prevSize);
-        prevSize = size + 1;
 
-        byte tagType = (byte) ((IoConstants.FLAG_FORMAT_AAC << 4))
-                | (IoConstants.FLAG_SIZE_16_BIT << 1);
-
-        tagType |= IoConstants.FLAG_RATE_44_KHZ << 2;
-//        switch (sampleRate) {
-//            case 44100:
-//                tagType |= IoConstants.FLAG_RATE_44_KHZ << 2;
-//                break;
-//            case 22050:
-//                tagType |= IoConstants.FLAG_RATE_22_KHZ << 2;
-//                break;
-//            case 11025:
-//                tagType |= IoConstants.FLAG_RATE_11_KHZ << 2;
-//                break;
-//            default:
-//                tagType |= IoConstants.FLAG_RATE_5_5_KHZ << 2;
-//        }
-
-        tagType |= IoConstants.FLAG_TYPE_STEREO;
-        IoBuffer body = IoBuffer.allocate(tag.getBodySize());
-        body.setAutoExpand(true);
-        body.put(tagType);
-        body.put(buf);
-        body.flip();
-        body.limit(tag.getBodySize());
-        tag.setBody(body);
-
-        IMessage msg = makeMessageFromTag(tag);
-        try {
-            publisher.pushMessage(msg);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     public IMessage makeMessageFromTag(Tag tag) {
         IRTMPEvent msg = null;
         switch (tag.getDataType()) {
@@ -118,6 +77,7 @@ abstract public class BasePacketizer {
         return rtmpMsg;
     }
 
+    // big endian encode & decode method.
     public static byte[] be16(short val)
     {
         byte[] buf = new byte[2];
@@ -125,6 +85,11 @@ abstract public class BasePacketizer {
         buf[0] = (byte)((val >> 8) & 0xff);
 
         return buf;
+    }
+
+    public static short be16(byte[] buf) {
+        int value = (buf[1] & 0xFF) | ((buf[0] & 0xFF) << 8);
+        return (short)value;
     }
 
     public static byte[] be24(int val)
@@ -136,6 +101,11 @@ abstract public class BasePacketizer {
         buf[0] = (byte)((val >> 16) & 0xff);
         return buf;
     }
+
+    public static int be24(byte[] buf) {
+        return (buf[2] & 0xFF) | ((buf[1] & 0xFF) << 8) | ((buf[0] & 0xFF) << 16);
+    }
+
     public static byte[] be32(int val) {
         byte[] buf = new byte[4];
 
@@ -144,6 +114,10 @@ abstract public class BasePacketizer {
         buf[1] = (byte)((val >> 16) & 0xff);
         buf[0] = (byte)((val >> 24) & 0xff);
         return buf;
+    }
+
+    public static int be32(byte[] buf) {
+        return (buf[3] & 0xFF) | ((buf[2] & 0xFF) << 8) | ((buf[1] & 0xFF) << 16) | ((buf[0] & 0xFF) << 24);
     }
 
     /** For debugging purposes. */

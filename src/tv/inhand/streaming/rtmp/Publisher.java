@@ -1,6 +1,5 @@
-package tv.inhand.streaming;
+package tv.inhand.streaming.rtmp;
 
-import android.util.Log;
 import org.red5.io.utils.ObjectMap;
 import org.red5.server.messaging.IMessage;
 import org.red5.server.net.rtmp.INetStreamEventHandler;

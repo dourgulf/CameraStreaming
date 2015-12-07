@@ -29,7 +29,7 @@ import android.media.MediaRecorder;
 import android.util.Log;
 
 /**
- * A MediaRecorder that streams what it records using a packetizer from the rtp package.
+ * A MediaRecorder that streams what it records using a packetizer.
  * You can't use this class directly !
  */
 public abstract class MediaStream implements Stream {
