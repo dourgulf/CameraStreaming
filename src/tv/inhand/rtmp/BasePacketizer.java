@@ -10,16 +10,10 @@ import org.red5.server.stream.message.RTMPMessage;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import android.os.ParcelFileDescriptor;
-
-//class Packet{
-//    public byte[] data;
-//    public long timestamp;
-//}
 
 /**
  * Created by jinchudarwin on 15/12/2.
@@ -100,7 +94,6 @@ abstract public class BasePacketizer {
 
                 while(true) {
                     try {
-                        Log.i(TAG, clsName + ": queue size:" + dataQueue.size());
                         Packet p = dataQueue.take();
                         if (p.data == null) {
                             Log.w(TAG, clsName + " consumer signal exit");

@@ -1,4 +1,4 @@
-package cn.jclive.CameraRecorder;
+package cn.jclive.CameraStreaming;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -6,9 +6,6 @@ import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-
-//import net.majorkernelpanic.streaming.Session;
-//import net.majorkernelpanic.streaming.SessionBuilder;
 
 import tv.inhand.capture.Session;
 import tv.inhand.capture.SessionBuilder;
