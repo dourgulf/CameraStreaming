@@ -1,9 +1,9 @@
-package tv.inhand.streaming.audio;
+package tv.inhand.capture.audio;
 
 import java.io.IOException;
 
 import android.os.ParcelFileDescriptor;
-import tv.inhand.streaming.MediaStream;
+import tv.inhand.capture.MediaStream;
 import android.media.MediaRecorder;
 import android.util.Log;
 
@@ -58,10 +58,6 @@ public abstract class AudioStream  extends MediaStream {
 	
 	@Override
 	protected void encodeWithMediaRecorder() throws IOException {
-		
-		// We need a local socket to forward data output by the camera to the packetizer
-		createSockets();
-
 		Log.v(TAG,"Requested audio with "+mQuality.bitRate/1000+"kbps"+" at "+mQuality.samplingRate/1000+"kHz");
 		
 		mMediaRecorder = new MediaRecorder();
@@ -75,7 +71,7 @@ public abstract class AudioStream  extends MediaStream {
 		// We write the ouput of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
 		// can then be manipulated at the other end of the socket
-		mMediaRecorder.setOutputFile(mSender.getFileDescriptor());
+		mMediaRecorder.setOutputFile(mPacketizer.getWriteFileDescriptor());
 
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
@@ -83,7 +79,7 @@ public abstract class AudioStream  extends MediaStream {
 		try {
 			// mReceiver.getInputStream contains the data from the camera
 			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setInputStream(new ParcelFileDescriptor.AutoCloseInputStream(mReceiver));
+//			mPacketizer.setInputStream(new ParcelFileDescriptor.AutoCloseInputStream(mReceiver));
 			mPacketizer.start();
 			mStreaming = true;
 		} catch (Exception e) {

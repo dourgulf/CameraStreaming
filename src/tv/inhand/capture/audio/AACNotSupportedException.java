@@ -1,4 +1,4 @@
-package tv.inhand.streaming.audio;
+package tv.inhand.capture.audio;
 
 public class AACNotSupportedException extends RuntimeException {
 

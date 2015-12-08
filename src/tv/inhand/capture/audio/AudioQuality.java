@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming.audio;
+package tv.inhand.capture.audio;
 
 /**
  * A class that represents the quality of an audio stream. 

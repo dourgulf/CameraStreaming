@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming;
+package tv.inhand.capture;
 
 import java.io.IOException;
 
@@ -26,13 +26,13 @@ import android.content.Context;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
 import android.view.SurfaceHolder;
-import tv.inhand.streaming.audio.AACStream;
-import tv.inhand.streaming.audio.AudioQuality;
-import tv.inhand.streaming.audio.AudioStream;
-import tv.inhand.streaming.rtmp.Publisher;
-import tv.inhand.streaming.video.H264Stream;
-import tv.inhand.streaming.video.VideoQuality;
-import tv.inhand.streaming.video.VideoStream;
+import tv.inhand.capture.audio.AACStream;
+import tv.inhand.capture.audio.AudioQuality;
+import tv.inhand.capture.audio.AudioStream;
+import tv.inhand.rtmp.Publisher;
+import tv.inhand.capture.video.H264Stream;
+import tv.inhand.capture.video.VideoQuality;
+import tv.inhand.capture.video.VideoStream;
 
 /**
  * Call {@link #getInstance()} to get access to the SessionBuilder.

@@ -18,15 +18,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming;
+package tv.inhand.capture;
 
 import java.io.IOException;
 
-import tv.inhand.streaming.audio.AudioStream;
-import tv.inhand.streaming.rtmp.Publisher;
-import tv.inhand.streaming.video.VideoStream;
+import tv.inhand.capture.audio.AudioStream;
+import tv.inhand.rtmp.Publisher;
 import android.content.Context;
 import android.net.wifi.WifiManager;
+import tv.inhand.capture.video.VideoStream;
 
 /**
  * This class makes use of all the streaming package.

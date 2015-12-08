@@ -18,20 +18,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming.audio;
+package tv.inhand.capture.audio;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
-import tv.inhand.streaming.rtmp.AACADTSPacketizer;
+import tv.inhand.rtmp.AACPacketizer;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.util.Log;
@@ -83,7 +80,7 @@ public class AACStream extends AudioStream {
 			Log.d(TAG,"AAC supported on this phone");
 		}
 		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-		mPacketizer = new AACADTSPacketizer();
+		mPacketizer = new AACPacketizer();
 	}
 
 	private static boolean AACStreamingSupported() {
@@ -111,7 +108,6 @@ public class AACStream extends AudioStream {
 	@Override
 	protected void encodeWithMediaRecorder() throws IOException {
 		testADTS();
-		((AACADTSPacketizer)mPacketizer).setSamplingRate(mActualSamplingRate);
 		super.encodeWithMediaRecorder();
 	}
 

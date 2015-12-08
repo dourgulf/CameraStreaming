@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming.video;
+package tv.inhand.capture.video;
 
 /**
  * A class that represents the quality of a video stream. 

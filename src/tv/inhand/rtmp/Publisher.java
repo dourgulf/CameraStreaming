@@ -1,4 +1,4 @@
-package tv.inhand.streaming.rtmp;
+package tv.inhand.rtmp;
 
 import org.red5.io.utils.ObjectMap;
 import org.red5.server.messaging.IMessage;
@@ -9,19 +9,18 @@ import org.red5.server.net.rtmp.status.StatusCodes;
 import org.red5.server.service.IPendingServiceCall;
 import org.red5.server.service.IPendingServiceCallback;
 import org.red5.server.stream.message.RTMPMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import android.util.Log;
 
 /**
  * Created by jinchudarwin on 15/12/2.
  */
 public class Publisher implements INetStreamEventHandler, IPendingServiceCallback {
-    private static Logger log = LoggerFactory.getLogger(Publisher.class);
+    private final static String TAG = "Publisher";
 
     private List<IMessage> frameBuffer = new ArrayList<IMessage>();
 
@@ -51,14 +50,13 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
 
     private RTMPClient rtmpClient;
 
-    public int getState() {
-        return currentState;
+    public Publisher(){}
+    public Publisher(String host, int port, String app) {
+        setHost(host);
+        setPort(port);
+        setApp(app);
     }
 
-    synchronized void setState(int state) {
-        this.currentState = state;
-        log.debug("state:{}", state);
-    }
     public void setHost(String host) {
         this.host = host;
     }
@@ -71,6 +69,14 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
         this.app = app;
     }
 
+    public int getState() {
+        return currentState;
+    }
+
+    synchronized void setState(int state) {
+        this.currentState = state;
+        Log.i(TAG, "RTMP state:" + state);
+    }
     public synchronized void start(String publishName, String publishMode, Object[] params) {
         setState(CONNECTING);
         this.publishName = publishName;
@@ -99,10 +105,8 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
     }
 
     public synchronized void onStreamEvent(Notify notify) {
-        log.debug("onStreamEvent: {}", notify);
         ObjectMap<?, ?> map = (ObjectMap<?, ?>) notify.getCall().getArguments()[0];
         String code = (String) map.get("code");
-        log.debug("<:{}", code);
         if (StatusCodes.NS_PUBLISH_START.equals(code)) {
             setState(PUBLISHED);
             while (frameBuffer.size() > 0) {
@@ -112,7 +116,6 @@ public class Publisher implements INetStreamEventHandler, IPendingServiceCallbac
     }
 
     public synchronized void resultReceived(IPendingServiceCall call) {
-        log.debug("resultReceived:> {}", call.getServiceMethodName());
         if ("connect".equals(call.getServiceMethodName())) {
             setState(STREAM_CREATING);
             rtmpClient.createStream(this);

@@ -1,41 +1,14 @@
-/*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
- * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
- * 
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-
-package tv.inhand.streaming.rtmp;
+package tv.inhand.rtmp;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 
 import android.util.Log;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.io.IoConstants;
 import org.red5.io.flv.Tag;
 import org.red5.server.messaging.IMessage;
-import org.red5.server.net.rtmp.event.*;
-import org.red5.server.net.rtmp.message.Constants;
-import org.red5.server.stream.message.RTMPMessage;
-import tv.inhand.streaming.audio.AACStream;
-
 /**
  *   
- *   RFC 3640.  
  *
  *   This packetizer must be fed with an InputStream containing ADTS AAC. 
  *   AAC will basically be rewrapped in an RTP stream and sent over the network.
@@ -43,62 +16,40 @@ import tv.inhand.streaming.audio.AACStream;
  *   each packet only carry a single and complete AAC access unit.
  * 
  */
-public class AACADTSPacketizer extends BasePacketizer implements Runnable {
-
-	private final static String TAG = "AACADTSPacketizer";
+public class AACPacketizer extends BasePacketizer{
+	private final static String TAG = "AACPacketizer";
 	private final static int flagSize = 2;
 
 	private Thread t;
-	private int samplingRate = 8000;
 	private int samplingRateIndex;
 	private boolean sendAsc = false;
     private int channelCount = 2;
 
-	public AACADTSPacketizer() throws IOException {
+	public AACPacketizer() throws IOException {
 		super();
 	}
 
-	public void start() {
-		if (t==null) {
-			t = new Thread(this);
-			t.start();
-		}
-	}
+    public boolean skipHeader(){
+        return true;
+    }
 
-	public void stop() {
-		if (t != null) {
-			try {
-				is.close();
-			} catch (IOException ignore) {}
-			t.interrupt();
-			try {
-				t.join();
-			} catch (InterruptedException e) {}
-			t = null;
-		}
-	}
+    @Override
+    public Packet fillPacket(){
+        try {
+            return new Packet(fillFrame(), System.currentTimeMillis());
+        } catch (IOException e) {
+            return null;
+        }
+    }
 
-	public void setSamplingRate(int samplingRate) {
-		this.samplingRate = samplingRate;
-	}
-
-	public void run() {
-
-		Log.i(TAG,"AAC ADTS packetizer started !");
-		try {
-			while (!Thread.interrupted()) {
-				byte[] frameBuf = fillFrame();
-				processFrame(frameBuf);
-			}
-		} catch (IOException e) {
-			Log.e(TAG, "run IOException", e);
-		} catch (Exception e) {
-			Log.e(TAG, "run Exception", e);
-		}
-
-		Log.i(TAG,"AAC ADTS packetizer stopped !");
-
-	}
+    @Override
+    public void sendPacket(Packet packet){
+        try {
+            processFrame(packet);
+        } catch (IOException e) {
+            Log.e(TAG, "Send packet exception", e);
+        }
+    }
 
 	private byte[] fillFrame()  throws IOException{
 		byte[] header = new byte[8];
@@ -135,28 +86,25 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
         }
 
 		samplingRateIndex = (header[2]&0x3C) >> 2;
-		samplingRate = AACStream.AUDIO_SAMPLING_RATES[samplingRateIndex];
 
 		int profile = ( (header[2]&0xC0) >> 6 ) + 1 ;
 
 //		Log.i(TAG,"frameLength: "+frameLength+" protection: "+protection+" p: "+profile+" sr: "+samplingRate+ ", header:" + printBuffer(header, 0, header.length));
 
 		byte[] frameBuf = new byte[frameLength];
-//        System.arraycopy(header, 0, frameBuf, 0, 7);
 		fill(frameBuf, 0, frameLength);
 		return frameBuf;
 	}
 
-	private void processFrame(byte[] frame) throws IOException {
+	private void processFrame(Packet packet) throws IOException {
 		if (!sendAsc) {
-			writeAudioBuffer(makeAsc(samplingRateIndex), 0);
+			writeAudioBuffer(makeAsc(samplingRateIndex), System.currentTimeMillis(), 0);
 			sendAsc = true;
 		}
-		writeAudioBuffer(frame, 1);
+		writeAudioBuffer(packet.data, packet.timestamp, 1);
 	}
-	private void writeAudioBuffer(byte[] buf, int avctype) throws IOException{
-		long timestamp = System.currentTimeMillis();
 
+	private void writeAudioBuffer(byte[] buf, long timestamp, int avctype) throws IOException{
 		if (timeBase == 0) {
 			timeBase = timestamp;
 		}

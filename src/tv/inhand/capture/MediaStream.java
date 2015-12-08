@@ -18,13 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming;
+package tv.inhand.capture;
 
 import java.io.IOException;
 
-import android.os.ParcelFileDescriptor;
-import tv.inhand.streaming.rtmp.BasePacketizer;
-import android.annotation.SuppressLint;
+import tv.inhand.rtmp.BasePacketizer;
 import android.media.MediaRecorder;
 import android.util.Log;
 
@@ -43,7 +41,7 @@ public abstract class MediaStream implements Stream {
 
 	protected boolean mStreaming = false;
 
-	protected ParcelFileDescriptor mReceiver, mSender = null;
+//	protected ParcelFileDescriptor mReceiver, mSender = null;
 
 	
 	public MediaStream() {
@@ -88,7 +86,8 @@ public abstract class MediaStream implements Stream {
 				mMediaRecorder.reset();
 				mMediaRecorder.release();
 				mMediaRecorder = null;
-				closeSockets();
+//				closeSockets();
+				mPacketizer.stop();
 			} catch (Exception e) {
 				Log.e(TAG, "stop", e);
 			}
@@ -98,19 +97,18 @@ public abstract class MediaStream implements Stream {
 
 	protected abstract void encodeWithMediaRecorder() throws IOException;
 
-	protected void createSockets() throws IOException {
-		ParcelFileDescriptor[] parcelFileDescriptors =ParcelFileDescriptor.createPipe();
-		mReceiver = new ParcelFileDescriptor(parcelFileDescriptors[0]);
-		mSender  = new ParcelFileDescriptor(parcelFileDescriptors[1]);
-	}
+//	protected void createSockets() throws IOException {
+//		ParcelFileDescriptor[] parcelFileDescriptors =ParcelFileDescriptor.createPipe();
+//		mReceiver = new ParcelFileDescriptor(parcelFileDescriptors[0]);
+//		mSender  = new ParcelFileDescriptor(parcelFileDescriptors[1]);
+//	}
 
-	protected void closeSockets() {
-		try {
-			mSender.close();
-			mSender = null;
-			mReceiver.close();
-			mReceiver = null;
-		} catch (Exception ignore) {}
-	}
-
+//	protected void closeSockets() {
+//		try {
+//			mSender.close();
+//			mSender = null;
+//			mReceiver.close();
+//			mReceiver = null;
+//		} catch (Exception ignore) {}
+//	}
 }

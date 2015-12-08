@@ -18,15 +18,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming.video;
+package tv.inhand.capture.video;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-import android.os.ParcelFileDescriptor;
-import com.jc.jclive.app.camera.Utils;
-import tv.inhand.streaming.MediaStream;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
@@ -35,6 +32,7 @@ import android.media.MediaRecorder;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
+import tv.inhand.capture.MediaStream;
 
 /** 
  * Don't use this class directly.
@@ -317,18 +315,12 @@ public abstract class VideoStream extends MediaStream {
 		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
 		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
 		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
-//		Log.i(TAG, "Preview orientation:" + mQuality.orientation + " video orientation:" + Utils.getVideoRotation(mCameraId, mQuality.orientation));
-//		mMediaRecorder.setVideoEncodingBitRate(Utils.getVideoRotation(mCameraId, mQuality.orientation));
 		mMediaRecorder.setOrientationHint(mQuality.orientation);
 	}
 	/**
 	 * Encoding of the audio/video is done by a MediaRecorder.
 	 */
 	protected void encodeWithMediaRecorder() throws IOException {
-
-		// We need a local socket to forward data output by the camera to the packetizer
-		createSockets();
-
 		// Opens the camera if needed
 		createCamera();
 
@@ -350,7 +342,7 @@ public abstract class VideoStream extends MediaStream {
 		// We write the ouput of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
 		// can then be manipulated at the other end of the socket
-		mMediaRecorder.setOutputFile(mSender.getFileDescriptor());
+		mMediaRecorder.setOutputFile(mPacketizer.getWriteFileDescriptor());
 
 		// Set event listener
 		mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
@@ -389,7 +381,6 @@ public abstract class VideoStream extends MediaStream {
 
 			// mReceiver.getInputStream contains the data from the camera
 			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setInputStream(new ParcelFileDescriptor.AutoCloseInputStream(mReceiver));
 			mPacketizer.start();
 			mStreaming = true;
 		} catch (IOException e) {

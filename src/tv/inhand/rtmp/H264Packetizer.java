@@ -1,53 +1,28 @@
-/*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
- * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
- * 
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+package tv.inhand.rtmp;
 
-package tv.inhand.streaming.rtmp;
-
-import java.io.IOException;
-import java.nio.ByteOrder;
-
-import android.util.Log;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.io.IoConstants;
 import org.red5.io.flv.Tag;
 import org.red5.server.messaging.IMessage;
 
+import java.io.IOException;
+import android.util.Log;
+
 /**
  * 
- *   RFC 3984.
- *   
- *   H.264 streaming over RTP.
+ *   H.264 streaming over RTMP.
  *   
  *   Must be fed with an InputStream containing H.264 NAL units preceded by their length (4 bytes).
  *   The stream must start with mpeg4 or 3gpp header, it will be skipped.
  *   
  */
-public class H264Packetizer extends BasePacketizer implements Runnable {
+public class H264Packetizer extends BasePacketizer{
 
 	public final static String TAG = "H264Packetizer";
 	private final static int MAX_VALID_NALU_LENGTH = 100000;
-	private final static int MAXPACKETSIZE = 1400;
 	private final static int flagSize = 5;
 
 
-	private Thread t = null;
 	private int naluLength = 0;
 	private byte[] sps = null, pps = null;
 	private boolean sentConfig = false;
@@ -56,35 +31,7 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		super();
 	}
 
-	public void start() throws IOException {
-		if (t == null) {
-			t = new Thread(this);
-			t.start();
-		}
-	}
-
-	public void stop() {
-		if (t != null) {
-			t.interrupt();
-			try {
-				t.join(1000);
-			} catch (InterruptedException e) {}
-			t = null;
-		}
-	}
-
-	public void setStreamParameters(byte[] pps, byte[] sps) {
-		this.pps = pps;
-		this.sps = sps;
-		Log.i(TAG, "PPS:" + printBuffer(pps, 0, pps.length));
-		Log.i(TAG, "SPS:" + printBuffer(sps, 0, sps.length));
-	}
-
-	public void run() {
-		long duration = 0, delta2 = 0;
-		Log.i(TAG,"H264 packetizer started !");
-
-		// This will skip the MPEG4 header if this step fails we can't stream anything :(
+    public boolean skipHeader(){
 		try {
 			byte buffer[] = new byte[4];
 			// Skip all atoms preceding mdat atom
@@ -93,29 +40,37 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 				is.read(buffer,0,3);
 				if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') {
 					Log.i(TAG, "Skip MP4 header");
-					break;
+					return true;
 				}
 			}
 		} catch (IOException e) {
 			Log.e(TAG,"Couldn't skip MP4 header :/", e);
-			return;
 		}
+        return false;
+    }
 
-		try {
-			while (!Thread.interrupted()) {
-				try {
-                    byte[] nalu = fillNalu();
-					processNalu(nalu);
-				} catch (IOException e) {
-					Log.e(TAG, "run IOException", e);
-				}
-			}
-		} catch (Exception e) {
-			Log.e(TAG, "run Exception", e);
-		}
+    @Override
+    public Packet fillPacket(){
+        try {
+            return new Packet(fillNalu(), System.currentTimeMillis());
+        } catch (IOException e) {
+            return null;
+        }
+    }
 
-		Log.i(TAG, "H264 packetizer stopped !");
-
+    @Override
+    public void sendPacket(Packet packet){
+        try {
+            processNalu(packet);
+        } catch (IOException e) {
+            Log.e(TAG, "Send packet exception", e);
+        }
+    }
+	public void setStreamParameters(byte[] pps, byte[] sps) {
+		this.pps = pps;
+		this.sps = sps;
+		Log.i(TAG, "PPS:" + printBuffer(pps, 0, pps.length));
+		Log.i(TAG, "SPS:" + printBuffer(sps, 0, sps.length));
 	}
 
 	private byte[] fillNalu()  throws IOException{
@@ -135,23 +90,23 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		return nalu;
 	}
 
-	private void processNalu(byte[] nalu) throws IOException {
+	private void processNalu(Packet packet) throws IOException {
 		// TODO: 还需要处理分片的情况
-
+        byte[] nalu = packet.data;
 		int nalType = nalu[4] & 0x1F;
 		if (nalType == 5 && !sentConfig) {
 			Log.i(TAG, "Send configuration one time");
 			byte[] conf = configurationFromSpsAndPps();
-			writeVideoNalu(conf, 0, true);
+			writeVideoNalu(conf, System.currentTimeMillis(), 0, true);
 			sentConfig = true;
 		}
         if (nalType == 7 || nalType == 8) {
             Log.w(TAG, "Received SPS/PPS frame, ignored");
         }
-		writeVideoNalu(nalu, 1, (nalType == 5));
+		writeVideoNalu(nalu, packet.timestamp, 1, (nalType == 5));
 	}
 
-	private void writeVideoNalu(byte[] nalu, int avctype, boolean keyframe) throws IOException {
+	private void writeVideoNalu(byte[] nalu, long timestamp, int avctype, boolean keyframe) throws IOException {
 		byte flag = IoConstants.FLAG_CODEC_H264;
 		if (keyframe) {
 			flag |= (IoConstants.FLAG_FRAMETYPE_KEYFRAME << 4);
@@ -159,7 +114,6 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 			flag |= (IoConstants.FLAG_FRAMETYPE_INTERFRAME << 4);
 		}
 
-		long timestamp = System.currentTimeMillis();
 		if (timeBase == 0) {
 			timeBase = timestamp;
 		}
@@ -244,7 +198,7 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 			type = header[4]&0x1F;
 
 			if (type == 5 || type == 1) {
-				naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
+                naluLength = be32(header);
 				if (naluLength>0 && naluLength<MAX_VALID_NALU_LENGTH) {
 					Log.e(TAG,"A NAL unit may have been found in the bit stream !");
 					break;

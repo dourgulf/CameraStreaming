@@ -18,15 +18,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package tv.inhand.streaming.video;
+package tv.inhand.capture.video;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import tv.inhand.streaming.mp4.MP4Config;
-import tv.inhand.streaming.rtmp.H264Packetizer;
+import tv.inhand.capture.mp4.MP4Config;
+import tv.inhand.rtmp.H264Packetizer;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.hardware.Camera.CameraInfo;

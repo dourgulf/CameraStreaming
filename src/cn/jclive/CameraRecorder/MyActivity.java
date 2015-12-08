@@ -1,21 +1,17 @@
 package cn.jclive.CameraRecorder;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.TextView;
 
 //import net.majorkernelpanic.streaming.Session;
 //import net.majorkernelpanic.streaming.SessionBuilder;
 
-import tv.inhand.streaming.Session;
-import tv.inhand.streaming.SessionBuilder;
+import tv.inhand.capture.Session;
+import tv.inhand.capture.SessionBuilder;
 
 
 public class MyActivity extends Activity implements SurfaceHolder.Callback, OnClickListener {
@@ -57,10 +53,10 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
                     .setContext(getApplicationContext())
                     .setSurfaceHolder(surfaceHolder)
 //            .setDestination(addr)
-//                    .setHost("192.168.50.19")
-//                    .setAppName("hls").build();
-                    .setHost("pushvideows.inhand.tv")
-                    .setAppName("testonly").build();
+                    .setHost("192.168.50.19")
+                    .setAppName("hls").build();
+//                    .setHost("pushvideows.inhand.tv")
+//                    .setAppName("testonly").build();
             ;
         } catch (Exception e) {
             Log.e(TAG, "Can't build session", e);
