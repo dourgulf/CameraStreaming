@@ -1,5 +1,3 @@
-A demo for camera streaming H.264,AAC using RTMP on Android
-
 # 介绍
 
 ## 干什么的
