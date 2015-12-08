@@ -139,16 +139,11 @@ public class H264Packetizer extends BasePacketizer implements Runnable {
 		// TODO: 还需要处理分片的情况
 
 		int nalType = nalu[4] & 0x1F;
-		if (nalType == 5) {
-			if (sentConfig) {
-				Log.i(TAG, "Already sent configuration");
-			}
-			else {
-				Log.i(TAG, "Send configuration one time");
-				byte[] conf = configurationFromSpsAndPps();
-				writeVideoNalu(conf, 0, true);
-				sentConfig = true;
-			}
+		if (nalType == 5 && !sentConfig) {
+			Log.i(TAG, "Send configuration one time");
+			byte[] conf = configurationFromSpsAndPps();
+			writeVideoNalu(conf, 0, true);
+			sentConfig = true;
 		}
         if (nalType == 7 || nalType == 8) {
             Log.w(TAG, "Received SPS/PPS frame, ignored");

@@ -52,7 +52,6 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 	private int samplingRate = 8000;
 	private int samplingRateIndex;
 	private boolean sendAsc = false;
-	private byte asc[] = new byte[2];
 
 	public AACADTSPacketizer() throws IOException {
 		super();
@@ -86,7 +85,6 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 
 		Log.i(TAG,"AAC ADTS packetizer started !");
 		try {
-			byte[] buffer = new byte[1024];
 			while (!Thread.interrupted()) {
 				byte[] frameBuf = fillFrame();
 				processFrame(frameBuf);
@@ -129,24 +127,28 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 		if (!protection) {
 			is.read(header, 0, 2);
 		}
+        else {
+            // restore the header
+            header[0] = (byte)0xFF;
+            header[1] = (byte)0xF0;
+        }
 
 		samplingRateIndex = (header[2]&0x3C) >> 2;
 		samplingRate = AACStream.AUDIO_SAMPLING_RATES[samplingRateIndex];
 
 		int profile = ( (header[2]&0xC0) >> 6 ) + 1 ;
 
-		Log.i(TAG,"frameLength: "+frameLength+" protection: "+protection+" p: "+profile+" sr: "+samplingRate+ ", header:" + printBuffer(header, 0, header.length));
+//		Log.i(TAG,"frameLength: "+frameLength+" protection: "+protection+" p: "+profile+" sr: "+samplingRate+ ", header:" + printBuffer(header, 0, header.length));
 
-		byte[] frameBuf = new byte[frameLength + 5];
-		System.arraycopy(header, 1, frameBuf, 0, 5);
-		fill(frameBuf, 5, frameLength);
+		byte[] frameBuf = new byte[frameLength];
+//        System.arraycopy(header, 0, frameBuf, 0, 7);
+		fill(frameBuf, 0, frameLength);
 		return frameBuf;
 	}
 
 	private void processFrame(byte[] frame) throws IOException {
 		if (!sendAsc) {
-			makeAsc((byte)samplingRateIndex, (byte)2);
-			writeAudioBuffer(asc, 0);
+			writeAudioBuffer(makeAsc(samplingRateIndex, 1), 0);
 			sendAsc = true;
 		}
 		writeAudioBuffer(frame, 1);
@@ -165,22 +167,24 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 		byte tagType = (byte) ((IoConstants.FLAG_FORMAT_AAC << 4))
 				| (IoConstants.FLAG_SIZE_16_BIT << 1);
 
+        // Only 44KHZ supported!
 		tagType |= IoConstants.FLAG_RATE_44_KHZ << 2;
-        switch (samplingRate) {
-            case 44100:
-                tagType |= IoConstants.FLAG_RATE_44_KHZ << 2;
-                break;
-            case 22050:
-                tagType |= IoConstants.FLAG_RATE_22_KHZ << 2;
-                break;
-            case 11025:
-                tagType |= IoConstants.FLAG_RATE_11_KHZ << 2;
-                break;
-            default:
-                tagType |= IoConstants.FLAG_RATE_5_5_KHZ << 2;
-        }
+//        switch (samplingRate) {
+//            case 44100:
+//                tagType |= IoConstants.FLAG_RATE_44_KHZ << 2;
+//                break;
+//            case 22050:
+//                tagType |= IoConstants.FLAG_RATE_22_KHZ << 2;
+//                break;
+//            case 11025:
+//                tagType |= IoConstants.FLAG_RATE_11_KHZ << 2;
+//                break;
+//            default:
+//                tagType |= IoConstants.FLAG_RATE_5_5_KHZ << 2;
+//        }
 
-		tagType |= IoConstants.FLAG_TYPE_STEREO;
+		// FIXME: AudioStream already fixed the channel count is 1, so mono only!
+		tagType |= IoConstants.FLAG_TYPE_MONO;
 
 		IoBuffer body = IoBuffer.allocate(tag.getBodySize());
 		body.setAutoExpand(true);
@@ -193,16 +197,20 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 
 		byte[] bodyBuf = body.array();
 
-		Log.i(TAG, "frame buffer:" + printBuffer(bodyBuf, 0, tag.getBodySize()<64?tag.getBodySize():64));
+//		Log.i(TAG, "frame buffer:" + printBuffer(bodyBuf, 0, tag.getBodySize()<64?tag.getBodySize():64));
 
 		IMessage msg = makeMessageFromTag(tag);
 		send(msg);
 	}
-	private void makeAsc(byte sampleRateIndex, byte channelCount)
+	private byte[] makeAsc(int sampleRateIndex, int channelCount)
 	{
 		// http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
+		byte asc[] = new byte[2];
 		asc[0] = (byte) ( 0x10 | ((sampleRateIndex>>1) & 0x3) );
 		asc[1] = (byte) ( ((sampleRateIndex & 0x1)<<7) | ((channelCount & 0xF) << 3) );
+
+		Log.i(TAG, "asc:" + printBuffer(asc, 0, asc.length));
+		return asc;
 	}
 
 	private int fill(byte[] buffer, int offset,int length) throws IOException {

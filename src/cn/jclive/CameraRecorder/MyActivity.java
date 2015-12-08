@@ -52,7 +52,6 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         surfaceHolder = holder;
         try {
-            InetAddress addr = InetAddress.getByName("192.168.50.19");
             SessionBuilder.getInstance()
                     // 设置一个context可以不用每次都监测MPEG的参数
                     .setContext(getApplicationContext())
@@ -60,6 +59,8 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
 //            .setDestination(addr)
                     .setHost("192.168.50.19")
                     .setAppName("hls").build();
+//                    .setHost("pushvideows.inhand.tv")
+//                    .setAppName("testonly").build();
             ;
         } catch (Exception e) {
             Log.e(TAG, "Can't build session", e);

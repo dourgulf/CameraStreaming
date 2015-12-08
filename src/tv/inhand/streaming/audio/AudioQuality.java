@@ -26,7 +26,8 @@ package tv.inhand.streaming.audio;
 public class AudioQuality {
 
 	/** Default audio stream quality. */
-	public final static AudioQuality DEFAULT_AUDIO_QUALITY = new AudioQuality(8000, 64000);
+	// !!RTMP AAC must be 44100 sample rate!!
+	public final static AudioQuality DEFAULT_AUDIO_QUALITY = new AudioQuality(44100, 64000);
 
 	/**	Represents a quality for a video stream. */ 
 	public AudioQuality() {}
