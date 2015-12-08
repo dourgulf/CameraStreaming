@@ -68,7 +68,7 @@ public abstract class AudioStream  extends MediaStream {
 		mMediaRecorder.setAudioSource(mAudioSource);
 		mMediaRecorder.setOutputFormat(mOutputFormat);
 		mMediaRecorder.setAudioEncoder(mAudioEncoder);
-		mMediaRecorder.setAudioChannels(1);
+		mMediaRecorder.setAudioChannels(2);
 		mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
 		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
 		

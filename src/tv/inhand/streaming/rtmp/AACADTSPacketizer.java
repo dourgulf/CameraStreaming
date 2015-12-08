@@ -52,6 +52,7 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 	private int samplingRate = 8000;
 	private int samplingRateIndex;
 	private boolean sendAsc = false;
+    private int channelCount = 2;
 
 	public AACADTSPacketizer() throws IOException {
 		super();
@@ -148,7 +149,7 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 
 	private void processFrame(byte[] frame) throws IOException {
 		if (!sendAsc) {
-			writeAudioBuffer(makeAsc(samplingRateIndex, 1), 0);
+			writeAudioBuffer(makeAsc(samplingRateIndex), 0);
 			sendAsc = true;
 		}
 		writeAudioBuffer(frame, 1);
@@ -184,7 +185,7 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 //        }
 
 		// FIXME: AudioStream already fixed the channel count is 1, so mono only!
-		tagType |= IoConstants.FLAG_TYPE_MONO;
+		tagType |= (channelCount == 2 ? IoConstants.FLAG_TYPE_STEREO : IoConstants.FLAG_TYPE_MONO);
 
 		IoBuffer body = IoBuffer.allocate(tag.getBodySize());
 		body.setAutoExpand(true);
@@ -202,7 +203,7 @@ public class AACADTSPacketizer extends BasePacketizer implements Runnable {
 		IMessage msg = makeMessageFromTag(tag);
 		send(msg);
 	}
-	private byte[] makeAsc(int sampleRateIndex, int channelCount)
+	private byte[] makeAsc(int sampleRateIndex)
 	{
 		// http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
 		byte asc[] = new byte[2];

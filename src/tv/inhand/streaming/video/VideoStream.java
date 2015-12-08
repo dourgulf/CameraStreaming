@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import android.os.ParcelFileDescriptor;
+import com.jc.jclive.app.camera.Utils;
 import tv.inhand.streaming.MediaStream;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
@@ -316,6 +317,8 @@ public abstract class VideoStream extends MediaStream {
 		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
 		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
 		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+//		Log.i(TAG, "Preview orientation:" + mQuality.orientation + " video orientation:" + Utils.getVideoRotation(mCameraId, mQuality.orientation));
+//		mMediaRecorder.setVideoEncodingBitRate(Utils.getVideoRotation(mCameraId, mQuality.orientation));
 		mMediaRecorder.setOrientationHint(mQuality.orientation);
 	}
 	/**

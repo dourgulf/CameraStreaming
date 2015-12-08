@@ -57,10 +57,10 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, OnCl
                     .setContext(getApplicationContext())
                     .setSurfaceHolder(surfaceHolder)
 //            .setDestination(addr)
-                    .setHost("192.168.50.19")
-                    .setAppName("hls").build();
-//                    .setHost("pushvideows.inhand.tv")
-//                    .setAppName("testonly").build();
+//                    .setHost("192.168.50.19")
+//                    .setAppName("hls").build();
+                    .setHost("pushvideows.inhand.tv")
+                    .setAppName("testonly").build();
             ;
         } catch (Exception e) {
             Log.e(TAG, "Can't build session", e);
